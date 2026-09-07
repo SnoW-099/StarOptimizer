@@ -10,8 +10,8 @@ const visual = {
   comboAnimation: ['Listas sin transiciones', 'Desactiva el efecto de apertura de las listas desplegables compatibles.']
 };
 const labels = {
-  overview: ['Tu equipo, en calma.', 'Entiende qué necesita. Ajusta solo lo que importa.', 'UN POCO MÁS SIMPLE.'],
-  recommendations: ['Pequeños ajustes. A tu medida.', 'Prepara una selección. Revísala. Tú tienes la última palabra.', 'LA FLUIDEZ EMPIEZA AQUÍ.'],
+  overview: ['Todo en su sitio.', 'El estado de tu equipo y tus ajustes, en un solo lugar.', 'UN POCO MÁS SIMPLE.'],
+  recommendations: ['Ajustes a tu medida.', 'Elige un perfil o prepara tus propios cambios.', 'LA FLUIDEZ EMPIEZA AQUÍ.'],
   startup: ['Un buen comienzo.', 'Menos aplicaciones al iniciar sesión, más espacio para lo que necesitas.', 'ELIGE QUIÉN TE ACOMPAÑA.'],
   processes: ['Cada recurso, a la vista.', 'Una lectura de tu equipo para decidir con información.', 'SIN CERRAR TUS PROGRAMAS.'],
   history: ['Puedes volver atrás.', 'Tus cambios y sus valores originales, guardados en este equipo.', 'TODO BAJO TU CONTROL.']
@@ -286,6 +286,15 @@ function appearance(simple) {
 }
 $('appearance').addEventListener('click', () => appearance(!document.body.classList.contains('simple')));
 try { appearance(localStorage.getItem('star-simple') === 'true'); } catch { /* Default appearance. */ }
+function theme(dark) {
+  document.body.classList.toggle('dark', dark);
+  $('theme').setAttribute('aria-pressed', String(dark));
+  const label = dark ? 'Activar modo claro' : 'Activar modo oscuro';
+  $('theme').title = label; $('theme').setAttribute('aria-label', label);
+  try { localStorage.setItem('star-dark', String(dark)); } catch { /* Theme remains usable without storage. */ }
+}
+$('theme').addEventListener('click', () => theme(!document.body.classList.contains('dark')));
+try { theme(localStorage.getItem('star-dark') === 'true'); } catch { /* Default light theme. */ }
 document.addEventListener('visibilitychange', () => { document.body.classList.toggle('paused', document.hidden); scheduleLive(); });
 api?.onBusyClose(() => toast('Estamos verificando un cambio. Espera a que termine antes de cerrar la app.'));
 loadHistory();

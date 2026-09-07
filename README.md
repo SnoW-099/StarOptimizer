@@ -1,10 +1,10 @@
 # StarOptimizer
 
-Aplicación de escritorio para Windows 10/11 x64. Versión 0.2.2: mascota adaptada al vídeo de referencia, interfaz de cristal, diagnóstico local y ajustes de energía/animaciones con revisión previa y recuperación persistente. Beta sin firma digital.
+Aplicación de escritorio para Windows 10/11 x64. Versión 0.3.0: interfaz clara inspirada en el diseño de escritorio de Apple, modo oscuro opcional y una mascota con flotación orgánica y movimiento suave de ojos. Conserva diagnóstico local, perfiles, búsquedas, exportación y ajustes reversibles. Beta sin firma digital.
 
 ## Ejecutar
 
-Descarga o genera `dist/StarOptimizer-0.2.2-portable.exe` y ábrelo. No necesita instalarse ni pide elevación. Windows puede mostrar una advertencia de editor desconocido porque el binario no está firmado. Algunas políticas de empresa pueden impedir leer o modificar ajustes; la app informa del error.
+Descarga o genera `dist/StarOptimizer-0.3.0-portable.exe` y ábrelo. No necesita instalarse ni pide elevación. Windows puede mostrar una advertencia de editor desconocido porque el binario no está firmado. Algunas políticas de empresa pueden impedir leer o modificar ajustes; la app informa del error.
 
 Para desarrollo, con Node.js y npm instalados:
 
@@ -50,9 +50,11 @@ Las 23 pruebas unitarias cubren el motor nuevo y la compatibilidad del motor de 
 
 ## Diseño y referencia
 
-Nova está dibujada con CSS propio siguiendo el vídeo aportado: círculo negro plano, ojos azules ovalados y pequeñas pupilas blancas. Sin boca, estrella, reflejos ni partículas decorativas. Un pequeño director de animaciones elige miradas curiosas y guiños con movimientos suaves. Sigue el cursor, responde al contacto y mantiene estados de atención, descanso y análisis. Tras unos 35 segundos sin interacción, se adormece y vuelve a despertar al mover el ratón o pulsar una tecla.
+Nova está dibujada con CSS propio siguiendo el vídeo aportado: círculo negro plano, ojos azules ovalados y pequeñas pupilas blancas. El cuerpo flota solo en vertical hasta 7 px durante un ciclo continuo de 9 segundos, con menos de un grado de inclinación y una variación de escala inferior al 1 %. No se desplaza de lado a lado ni encadena poses. Las pupilas siguen el cursor con una transición amortiguada y ambos ojos parpadean cada 10 segundos; el cierre y apertura duran 260 ms. Hacer clic centra la mirada, sin mensajes ni parpadeos adicionales.
 
-Las animaciones usan capas separadas y Web Animations; los temporizadores solo eligen gestos, sin un bucle JavaScript continuo. Se cancelan al salir de Inicio, ocultar la app, activar movimiento reducido o elegir la apariencia Sencilla. `test:nova` comprueba gestos espontáneos, caricias, variedad de clics, sueño/despertar y suspensión de animaciones con reloj controlado.
+El parpadeo usa un único temporizador con cadencia de 10 segundos, independiente de los clics o el análisis. La mirada actualiza como máximo una vez por fotograma cuando llega movimiento de puntero; no hay un bucle JavaScript continuo. Al salir de Vista general, ocultar la app, activar movimiento reducido o elegir la apariencia Sencilla se cancelan las animaciones. Al volver, la cadencia comienza de nuevo desde 10 segundos, sin acumular parpadeos pendientes. `test:nova` verifica estos intervalos con un reloj controlado, ausencia de movimiento lateral, clics silenciosos y suspensión de movimiento.
+
+La interfaz utiliza tarjetas agrupadas, navegación lateral con etiquetas, tipografía del sistema y controles azules. El botón de tema en la barra superior alterna claro/oscuro y conserva la preferencia localmente. Cristal/Sencilla sigue controlando los efectos visuales de la app. No se han retirado las herramientas de optimización ni el historial.
 
 Referencia visual aportada por el usuario: [Creature Company / LILGUY EYES](https://creature.company/eyes?swatch=circle-stoplight). No se distribuye código, imágenes ni animaciones descargadas de Creature Company. No se ha verificado una licencia que permita redistribuir sus assets.
 
