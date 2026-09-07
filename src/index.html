@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>StarOptimizer</title><link rel="stylesheet" href="style.css">
+</head>
+<body>
+<aside class="sidebar">
+  <a class="brand" href="#"><span class="brand-star">✦</span> StarOptimizer<span class="beta">BETA</span></a>
+  <div class="workspace">TU ESPACIO DE CONTROL</div>
+  <nav aria-label="Navegación principal">
+    <button class="nav active" data-view="overview"><span>▦</span> Vista general</button>
+    <button class="nav" data-view="recommendations"><span>✧</span> Optimización</button>
+    <button class="nav" data-view="startup"><span>↗</span> Inicio de Windows</button>
+    <button class="nav" data-view="processes"><span>▤</span> Procesos</button>
+    <button class="nav" data-view="history"><span>↶</span> Historial de cambios</button>
+  </nav>
+  <div class="sidebar-bottom"><div class="safe-icon">◇</div><strong>Tu PC, bajo tu control.</strong><p>Sin borrados automáticos.<br>Cambios de energía reversibles.</p><span class="version">StarOptimizer · v0.1.0</span></div>
+</aside>
+<main>
+  <header><div class="breadcrumb">Mi equipo <span>/</span> <b id="breadcrumb">Vista general</b></div><div class="local"><span class="dot"></span> Todo se queda en tu PC</div></header>
+  <div class="heading"><div><div class="eyebrow">MENOS RUIDO. MÁS CONTROL.</div><h1 id="title">Un buen día para tu PC.</h1><p id="subtitle">Conoce tu equipo. Mejora lo que importa.</p></div><button class="button secondary" id="export">↗ Exportar diagnóstico</button></div>
+  <section id="overview" class="view">
+    <div class="hero">
+      <div class="hero-copy"><span class="pill"><span class="dot"></span> OPTIMIZACIÓN CON CUIDADO</span><h2>Más fluido.<br>Igual de tuyo.</h2><p id="hero-description">Soy Nova, tu compañero de puesta a punto.<br>Empezamos por conocer tu PC, sin cambiar nada.</p><button class="button primary" id="scan">✧ Analizar mi PC <span>→</span></button><div class="hero-footnote" id="scan-status">Solo lectura · Sin permisos de administrador</div></div>
+      <div class="mascot-space" aria-label="Nova, mascota de ojos azules"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><span class="spark spark-one">✦</span><span class="spark spark-two">+</span><div class="mascot"><div class="eyes"><div class="eye"><div class="pupil"></div></div><div class="eye"><div class="pupil"></div></div></div><div class="cheek left"></div><div class="cheek right"></div></div><div class="mascot-shadow"></div><span class="nova-label">NOVA <span>·</span> AQUÍ PARA AYUDAR</span></div>
+    </div>
+    <div class="section-title"><h3>Tu equipo, de un vistazo</h3><span id="last-scan">Pendiente de análisis</span></div>
+    <div class="metrics">
+      <article class="metric"><div class="metric-top"><span>▥</span> Procesador <small>CPU</small></div><div class="metric-value" id="cpu-value">— <em>%</em></div><progress id="cpu-bar" max="100" value="0"></progress><p id="cpu-detail">Analiza para ver el uso actual</p></article>
+      <article class="metric"><div class="metric-top"><span>▣</span> Memoria <small>RAM</small></div><div class="metric-value" id="memory-value">— <em>GB</em></div><progress id="memory-bar" max="100" value="0"></progress><p id="memory-detail">Memoria utilizada / total</p></article>
+      <article class="metric"><div class="metric-top"><span>▱</span> Almacenamiento <small>DISCO</small></div><div class="metric-value" id="disk-value">— <em>GB</em></div><progress id="disk-bar" max="100" value="0"></progress><p id="disk-detail">Espacio libre en tus unidades</p></article>
+    </div>
+    <div class="section-title"><h3>Pequeños pasos, mejores hábitos</h3><button class="text-button" data-go="recommendations">Ver recomendaciones →</button></div>
+    <div class="quick-grid"><button class="quick-card" data-go="startup"><span class="quick-icon">↗</span><div><h4>Un inicio más ligero</h4><p>Revisa qué arranca con Windows.</p></div><span>→</span></button><button class="quick-card" data-go="recommendations"><span class="quick-icon green">ϟ</span><div><h4>Energía a tu medida</h4><p>Elige un plan que encaje contigo.</p></div><span>→</span></button></div>
+    <div class="notice"><span>◇</span><p><strong>Optimizar también es saber qué dejar como está.</strong> Nova no borra tus archivos, no desactiva tu antivirus y no cierra tus programas.</p></div>
+  </section>
+  <section id="recommendations" class="view" hidden>
+    <div class="panel"><h3>Lo que cuenta tu diagnóstico</h3><div id="insights" class="rows"><p class="empty">Analiza tu PC para obtener recomendaciones basadas en su estado.</p></div></div>
+    <div class="panel"><div class="section-title"><h3>Planes de energía</h3><span class="tag">Reversible</span></div><p>Usa Equilibrado para el día a día. Un plan de alto rendimiento puede consumir más energía y generar más calor; la mejora depende de tu equipo.</p><div id="plans" class="rows"><p class="empty">Analiza tu PC para ver los planes disponibles.</p></div></div>
+    <div class="panel"><h3>Opciones de Windows</h3><p>Estos accesos abren los controles oficiales. Los cambios hechos allí se gestionan desde Windows.</p><div class="rows"><div class="row"><div><strong>Modo Juego</strong><p>Revisa la configuración de Windows para jugar.</p></div><button class="button secondary" data-settings="gaming">Abrir ajustes ↗</button></div><div class="row"><div><strong>Windows Update</strong><p>Consulta las actualizaciones disponibles cuando te venga bien.</p></div><button class="button secondary" data-settings="update">Abrir ajustes ↗</button></div><div class="row"><div><strong>Energía y suspensión</strong><p>Controla el equilibrio entre autonomía y rendimiento.</p></div><button class="button secondary" data-settings="energy">Abrir ajustes ↗</button></div></div></div>
+    <div class="notice">◇ <p>Esta versión no aplica paquetes de tweaks ni promete ganancias de FPS. Cada equipo necesita un diagnóstico propio.</p></div>
+  </section>
+  <section id="startup" class="view" hidden><div class="panel"><div class="section-title"><h3>Programas al iniciar sesión</h3><button class="button secondary" data-settings="startup">Gestionar en Windows ↗</button></div><p>Inventario de entradas de inicio reportadas por Windows. Puede incluir entradas deshabilitadas y no cubre todas las tareas programadas. Comprueba su estado en Ajustes antes de decidir.</p><div id="startup-list" class="rows"><p class="empty">Analiza tu PC para consultar las entradas de inicio.</p></div></div></section>
+  <section id="processes" class="view" hidden><div class="panel"><div class="section-title"><h3>Mayor uso de memoria</h3><span class="tag">Solo lectura</span></div><p>Los 12 procesos con más memoria residente en el momento del análisis. Un uso elevado no implica un problema. Guarda tu trabajo antes de cerrar una app por tu cuenta.</p><div id="process-list" class="rows"><p class="empty">Analiza tu PC para consultar los procesos.</p></div></div><div class="panel"><h3>Unidades locales</h3><div id="disk-list" class="rows"><p class="empty">Sin análisis todavía.</p></div></div></section>
+  <section id="history" class="view" hidden><div class="panel"><div class="section-title"><h3>Todo cambio tiene un camino de vuelta</h3><span class="tag">Guardado en este PC</span></div><p>Antes de cambiar la energía guardamos el identificador del plan original. Puedes restaurarlo incluso después de cerrar la app. Los ajustes externos a StarOptimizer no aparecen aquí.</p><div id="history-list" class="rows"></div></div></section>
+  <footer><span><span class="dot"></span> DIAGNÓSTICO LOCAL</span><span>Hecho para cuidar tu equipo. ✦</span></footer>
+</main>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+<script src="renderer.js"></script>
+</body></html>

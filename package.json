@@ -1,0 +1,41 @@
+{
+  "name": "staroptimizer",
+  "version": "0.1.0",
+  "description": "Diagnóstico local y ajustes reversibles para Windows",
+  "main": "src/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.cjs",
+    "test:ui": "node test/ui.cjs",
+    "dist": "electron-builder --win portable --x64"
+  },
+  "keywords": [],
+  "author": "StarOptimizer",
+  "license": "UNLICENSED",
+  "type": "commonjs",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "electron": "^44.2.0",
+    "electron-builder": "^26.15.3"
+  },
+  "private": true,
+  "build": {
+    "appId": "com.staroptimizer.desktop",
+    "productName": "StarOptimizer",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "portable",
+      "signExecutable": false,
+      "icon": "src/assets/icon.ico"
+    },
+    "portable": {
+      "artifactName": "StarOptimizer-${version}-portable.exe"
+    }
+  }
+}
