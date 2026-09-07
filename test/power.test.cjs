@@ -50,3 +50,18 @@ test('unwritable journal prevents Windows mutation', async t => {
   const f = await fixture(t); const blocker = path.join(f.dir, 'not-directory'); await fs.writeFile(blocker, 'x');
   const manager = createPowerManager(blocker, f.adapter); await assert.rejects(manager.apply(B)); assert.equal(f.calls(), 0);
 });
+test('recovers after Windows changed but completion was interrupted', async t => {
+  const f = await fixture(t);
+  const originalPower = f.adapter.power;
+  f.adapter.power = async args => { await originalPower(args); throw Error('Interrupted after mutation'); };
+  await assert.rejects(f.manager.apply(B)); assert.equal(f.active(), B);
+  const journal = await f.manager.read(); assert.equal(journal[0].status, 'pending');
+  f.adapter.power = originalPower;
+  await createPowerManager(f.dir, f.adapter).undo(journal[0].id);
+  assert.equal(f.active(), A);
+});
+test('missing original plan prevents restoration without another mutation', async t => {
+  const f = await fixture(t); const journal = await f.manager.apply(B);
+  f.adapter.plans = async () => [{ id: B, active: true }];
+  await assert.rejects(f.manager.undo(journal[0].id)); assert.equal(f.calls(), 1);
+});
