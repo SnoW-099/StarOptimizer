@@ -1,0 +1,44 @@
+/* Flat circle / blue eyes / small white dots, following the supplied video. */
+.nova-button, .nova-motion { width: 223px; height: 223px; }
+.nova-button .mascot {
+  width: 223px;
+  height: 223px;
+  border-radius: 50%;
+  background: #000;
+  box-shadow: none;
+  overflow: hidden;
+}
+.simple .nova-button .mascot { box-shadow: none; }
+.nova-shine, .nova-star, .cheek, .smile, .eye-light, .nova-sleep,
+.nova-aura, .nova-orbit, .nova-shadow, .particle, .nova-pop { display: none !important; }
+.nova-button .face { animation: none; }
+.nova-button .eyes { left: 18px; top: 54px; gap: 7px; }
+.nova-button .eye, .scanning .nova-button .eye {
+  width: 91px;
+  height: 102px;
+  background: #6b9cf0;
+  border-radius: 50%;
+  box-shadow: none;
+  rotate: -13deg;
+  transform: none;
+}
+.nova-button .eye:nth-child(2) { rotate: 13deg; transform: none; }
+#nova-space[data-mood="curious"] .eye:first-child { border-radius: 50%; }
+.nova-button .iris {
+  width: 10px;
+  height: 14px;
+  left: 64px;
+  top: 51px;
+  border-radius: 50%;
+  background: #f7edee;
+  box-shadow: none;
+}
+.nova-button .eye:nth-child(2) .iris { left: 17px; }
+.nova-button .pupil { display: none; }
+.nova-button .eyelid { background: #000; box-shadow: none; border-radius: 0 0 50% 50%; }
+.nova-motion { animation: nova-reference-drift 7s ease-in-out infinite; }
+@keyframes nova-reference-drift {
+  0%, 100% { transform: translate(0, 0); }
+  35% { transform: translate(2px, -3px); }
+  70% { transform: translate(-2px, 2px); }
+}

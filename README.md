@@ -1,10 +1,10 @@
 # StarOptimizer
 
-Aplicación de escritorio para Windows 10/11 x64. Versión 0.2.1: Nova con gestos autónomos, interfaz de cristal, diagnóstico local y ajustes de energía/animaciones con revisión previa y recuperación persistente. Beta sin firma digital.
+Aplicación de escritorio para Windows 10/11 x64. Versión 0.2.2: mascota adaptada al vídeo de referencia, interfaz de cristal, diagnóstico local y ajustes de energía/animaciones con revisión previa y recuperación persistente. Beta sin firma digital.
 
 ## Ejecutar
 
-Descarga o genera `dist/StarOptimizer-0.2.1-portable.exe` y ábrelo. No necesita instalarse ni pide elevación. Windows puede mostrar una advertencia de editor desconocido porque el binario no está firmado. Algunas políticas de empresa pueden impedir leer o modificar ajustes; la app informa del error.
+Descarga o genera `dist/StarOptimizer-0.2.2-portable.exe` y ábrelo. No necesita instalarse ni pide elevación. Windows puede mostrar una advertencia de editor desconocido porque el binario no está firmado. Algunas políticas de empresa pueden impedir leer o modificar ajustes; la app informa del error.
 
 Para desarrollo, con Node.js y npm instalados:
 
@@ -50,9 +50,9 @@ Las 23 pruebas unitarias cubren el motor nuevo y la compatibilidad del motor de 
 
 ## Diseño y referencia
 
-Nova está dibujada con CSS propio. Un pequeño director de animaciones elige miradas curiosas, estiramientos, guiños y saltos con intervalos variables. Respira, parpadea de forma irregular, sigue el cursor y reacciona a movimientos rápidos cercanos. Pasa el cursor por su frente para acariciarla; pulsarla alterna varias reacciones. Tras unos 35 segundos sin interacción, se adormece y vuelve a despertar al mover el ratón o pulsar una tecla. Tiene expresiones específicas para análisis, éxito, restauración y error.
+Nova está dibujada con CSS propio siguiendo el vídeo aportado: círculo negro plano, ojos azules ovalados y pequeñas pupilas blancas. Sin boca, estrella, reflejos ni partículas decorativas. Un pequeño director de animaciones elige miradas curiosas y guiños con movimientos suaves. Sigue el cursor, responde al contacto y mantiene estados de atención, descanso y análisis. Tras unos 35 segundos sin interacción, se adormece y vuelve a despertar al mover el ratón o pulsar una tecla.
 
-Las animaciones usan capas separadas y Web Animations; los temporizadores solo eligen gestos, sin un bucle JavaScript continuo. Se cancelan al salir de Inicio, ocultar la app, activar movimiento reducido o elegir la apariencia Sencilla. Las partículas están limitadas a cinco y se retiran al terminar. `test:nova` comprueba gestos espontáneos, caricias, variedad de clics, sueño/despertar y suspensión de animaciones con reloj controlado.
+Las animaciones usan capas separadas y Web Animations; los temporizadores solo eligen gestos, sin un bucle JavaScript continuo. Se cancelan al salir de Inicio, ocultar la app, activar movimiento reducido o elegir la apariencia Sencilla. `test:nova` comprueba gestos espontáneos, caricias, variedad de clics, sueño/despertar y suspensión de animaciones con reloj controlado.
 
 Referencia visual aportada por el usuario: [Creature Company / LILGUY EYES](https://creature.company/eyes?swatch=circle-stoplight). No se distribuye código, imágenes ni animaciones descargadas de Creature Company. No se ha verificado una licencia que permita redistribuir sus assets.
 

@@ -45,16 +45,6 @@ window.createNova = function createNova() {
     const selected = wink ? [eyes[1]] : eyes;
     for (const eye of selected) animate(eye, [{ scale: '1 1' }, { scale: '1 .07', offset: .42 }, { scale: '1 1' }], { duration: wink ? 380 : 170 });
   }
-  function particles(heart = false) {
-    if (!allowed()) return;
-    space.querySelectorAll('.nova-pop').forEach(el => el.remove());
-    for (let i = 0; i < 5; i++) {
-      const el = document.createElement('span'); el.className = 'nova-pop'; el.textContent = heart ? '♡' : '✦'; el.setAttribute('aria-hidden', 'true');
-      el.style.setProperty('--pop-x', `${(i - 2) * 39}px`); el.style.setProperty('--pop-y', `${-45 - (i % 3) * 23}px`);
-      el.style.animationDelay = `${i * 45}ms`; space.append(el);
-    }
-    clearTimeout(sparkleTimer); sparkleTimer = setTimeout(() => space.querySelectorAll('.nova-pop').forEach(el => el.remove()), 1500);
-  }
   const poses = {
     curious: [
       { transform: 'rotate(0) translateY(0)' }, { transform: 'rotate(-13deg) translateY(-4px)', offset: .32 },
@@ -83,6 +73,12 @@ window.createNova = function createNova() {
       { transform: 'rotate(6deg)', offset: .5 }, { transform: 'rotate(-3deg)', offset: .75 }, { transform: 'rotate(0)' }
     ]
   };
+  // The supplied character has restrained motion: most expression comes from its eyes.
+  poses.curious = [{ transform: 'rotate(0)' }, { transform: 'rotate(-4deg)', offset: .35 }, { transform: 'rotate(3deg)', offset: .7 }, { transform: 'rotate(0)' }];
+  poses.stretch = [{ transform: 'scale(1)' }, { transform: 'scale(.99,1.02)', offset: .4 }, { transform: 'scale(1)' }];
+  poses.happy = [{ transform: 'translateY(0)' }, { transform: 'translateY(-5px)', offset: .4 }, { transform: 'translateY(0)' }];
+  poses.pet = [{ transform: 'rotate(0)' }, { transform: 'rotate(4deg)', offset: .35 }, { transform: 'rotate(-3deg)', offset: .7 }, { transform: 'rotate(0)' }];
+  poses.surprise = [{ transform: 'scale(1)' }, { transform: 'scale(1.025)', offset: .3 }, { transform: 'scale(1)' }];
   function gesture(name, text, duration = 1600) {
     clearTimeout(resetTimer);
     gestureUntil = performance.now() + duration;
@@ -90,7 +86,6 @@ window.createNova = function createNova() {
     mood(name, text);
     if (poses[name]) animate(body, poses[name], { duration });
     if (name === 'wink') blink(true);
-    if (name === 'happy' || name === 'pet') particles(name === 'pet');
     resetTimer = setTimeout(() => { gestureUntil = 0; rest(); }, duration + 300);
   }
   function scheduleBlink() {
@@ -120,7 +115,7 @@ window.createNova = function createNova() {
           else if (next === 1) { gaze(7, -5); gesture('wink', 'Tengo un ojo puesto en tu PC.', 1000); }
           else if (next === 2) { gesture('stretch', 'Me estiro un poco. Ya estoy.', 2000); gaze(0, -4); }
           else if (next === 3) { gesture('curious', 'Por aquí todo tranquilo.', 1900); gaze(9, 2); }
-          else { gesture('happy', 'Un pequeño salto y seguimos.', 1300); gaze(0, 0); }
+          else { gesture('happy', 'Aquí estoy.', 1300); gaze(0, 0); }
         }
       }
       scheduleIdle();

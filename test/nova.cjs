@@ -21,7 +21,7 @@ const fs = require('node:fs/promises');
     assert.equal(await mood(), 'curious', 'Nova initiates her own gesture without a click');
     await page.locator('#nova').focus(); await page.locator('#nova').press('Enter');
     assert.equal(await mood(), 'happy');
-    assert.equal(await page.locator('.nova-pop').count(), 5);
+    assert.equal(await page.locator('.nova-pop').count(), 0);
     const box = await page.locator('#nova').boundingBox();
     await page.clock.runFor(2100);
     await page.mouse.move(box.x + box.width / 2, box.y + 28);
