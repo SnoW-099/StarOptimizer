@@ -84,6 +84,16 @@ h2>span { color: var(--muted); }
 .ghost { background: transparent; border-color: transparent; color: var(--accent); }
 .hero-copy>.micro { color: var(--muted); font-size: 9px; margin-top: 12px; }
 .mascot-space { min-height: 286px; }
+.nova-home-slot { display: contents; }
+#nova-dock {
+  position: fixed; right: 22px; bottom: 20px; z-index: 8;
+  width: 156px; height: 156px; pointer-events: none;
+}
+#nova-dock .mascot-space { width: 156px; min-height: 156px; overflow: visible; }
+#nova-dock .nova-button { scale: .64; transform-origin: 50% 50%; pointer-events: auto; }
+#nova-dock .nova-caption { display: none !important; }
+#nova-dock .mascot { box-shadow: 0 10px 26px #00000016; }
+body.dark #nova-dock .mascot { box-shadow: 0 12px 28px #00000052; }
 .section-title { margin-top: 23px; margin-bottom: 13px; }
 h3 { font-size: 13px; font-weight: 600; color: var(--text); }
 .live-control { color: var(--muted); font-size: 10px; }
@@ -192,6 +202,7 @@ dialog>p { color: var(--muted); font-size: 12px; }
   .quick-card { padding: 16px; gap: 11px; }
   .quick-card small { font-size: 9px; }
   #toast, .operation { left: calc(50% + 96px); }
+  #nova-dock { right: 14px; bottom: 14px; scale: .88; transform-origin: 100% 100%; }
 }
 @media (max-width: 960px) {
   .rail { width: 174px; padding-left: 10px; padding-right: 10px; }
@@ -209,4 +220,5 @@ dialog>p { color: var(--muted); font-size: 12px; }
   .quick-icon { width: 30px; height: 30px; }
   .quick-card strong { font-size: 11px; }
   #toast, .operation { left: calc(50% + 87px); max-width: calc(100vw - 220px); }
+  #nova-dock { scale: .76; right: 7px; bottom: 7px; }
 }

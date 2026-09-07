@@ -19,13 +19,16 @@
 }
 .nova-button .eye:nth-child(2) { rotate: 13deg; transform: none; }
 .nova-button .iris {
-  width: 10px; height: 14px; left: 64px; top: 51px; border-radius: 50%;
+  width: 16px; height: 23px; left: 60px; top: 42px; border-radius: 50%;
   background: #f7edee; box-shadow: none;
   transform: translate(var(--gaze-x),var(--gaze-y));
   will-change: transform;
-  transition: transform 480ms cubic-bezier(.16,1,.3,1);
+  transition: transform var(--gaze-duration,760ms) var(--gaze-easing,cubic-bezier(.16,1,.3,1));
 }
-.nova-button .eye:nth-child(2) .iris { left: 17px; }
+.nova-button .eye:nth-child(2) .iris {
+  left: 15px;
+  transform: translate(calc(var(--gaze-x) * .92),calc(var(--gaze-y) * .96));
+}
 .nova-shine, .nova-star, .cheek, .smile, .eye-light, .eyelid, .pupil,
 .nova-sleep, .nova-aura, .nova-orbit, .nova-shadow, .particle, .nova-pop,
 .nova-caption { display: none !important; }

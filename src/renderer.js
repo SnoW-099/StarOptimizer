@@ -1,6 +1,15 @@
 const $ = id => document.getElementById(id);
 const api = window.star;
 const nova = window.createNova();
+const novaSpace = $('nova-space');
+const novaHome = document.createElement('div');
+novaHome.className = 'nova-home-slot';
+novaSpace.parentNode.insertBefore(novaHome, novaSpace);
+novaHome.append(novaSpace);
+const novaDock = document.createElement('aside');
+novaDock.id = 'nova-dock';
+novaDock.setAttribute('aria-label', 'Nova, tu compañera de optimización');
+document.body.append(novaDock);
 let snapshot, journal = [], draft = {}, token, analysisTask, operating = false, toastTimer, liveTimer, view = 'overview';
 const GB = n => (Number(n) / 1073741824).toLocaleString('es-ES', { maximumFractionDigits: 1 });
 const active = e => ['pending', 'applied', 'recovering', 'recovery-needed'].includes(e.status);
@@ -41,11 +50,26 @@ function button(text, action) {
     b.disabled = true; try { await action(); } catch (e) { toast(e.message); } finally { b.disabled = false; }
   }); return b;
 }
+function moveNova(next, from = novaSpace.getBoundingClientRect()) {
+  const target = next === 'overview' ? novaHome : novaDock;
+  if (novaSpace.parentElement === target) return;
+  target.append(novaSpace);
+  const to = novaSpace.getBoundingClientRect();
+  if (!from.width || !to.width) return;
+  const dx = from.left - to.left, dy = from.top - to.top;
+  const scale = Math.min(1.8, Math.max(.55, from.width / to.width));
+  novaSpace.animate([
+    { transform: `translate3d(${dx}px,${dy}px,0) scale(${scale})`, opacity: .72 },
+    { transform: 'translate3d(0,0,0) scale(1)', opacity: 1 }
+  ], { duration: 680, easing: 'cubic-bezier(.22,1,.36,1)' });
+}
 function show(next) {
   if (operating || !labels[next]) return;
+  const previousNovaPosition = novaSpace.getBoundingClientRect();
   view = next;
-  nova.context({ visible: view === 'overview' });
   document.querySelectorAll('.view').forEach(el => el.hidden = el.id !== view);
+  moveNova(view, previousNovaPosition);
+  nova.context({ visible: true });
   document.querySelectorAll('.nav').forEach(el => {
     el.classList.toggle('active', el.dataset.view === view);
     if (el.dataset.view === view) el.setAttribute('aria-current', 'page'); else el.removeAttribute('aria-current');
