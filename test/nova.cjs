@@ -18,7 +18,7 @@ const path = require('node:path');
       window.novaAnimationCalls = [];
       const original = Element.prototype.animate;
       Element.prototype.animate = function(...args) {
-        if (this.closest('#nova-space')) window.novaAnimationCalls.push({ eye: this.classList.contains('eye'), at: performance.now() });
+        if (this.classList.contains('nova-lid')) window.novaAnimationCalls.push({ eye: true, duration: args[1]?.duration, at: performance.now() });
         return original.apply(this, args);
       };
     });
@@ -33,6 +33,7 @@ const path = require('node:path');
     await page.clock.runFor(10000);
     calls = await page.evaluate(() => novaAnimationCalls);
     assert.equal(calls.length, 4); assert.equal(calls[2].at - calls[0].at, 10000);
+    assert.deepEqual(calls.map(c => c.duration), [360,360,720,720]);
     const caption = await page.textContent('#nova-caption');
     await page.locator('#nova').focus(); await page.locator('#nova').press('Enter');
     assert.equal(await page.textContent('#nova-caption'), caption, 'click must not write a message');
@@ -40,7 +41,7 @@ const path = require('node:path');
     assert.equal(await page.evaluate(() => novaAnimationCalls.length), 4, 'click must not add a blink');
     await page.mouse.move(100, 150); await page.clock.runFor(20);
     assert.notEqual(await page.locator('#nova').evaluate(el => el.style.getPropertyValue('--gaze-x')), '0px');
-    for (const selector of ['#nova', '.face']) {
+    for (const selector of ['#nova']) {
       assert.deepEqual(await page.locator(selector).evaluate(el => ({ transform: getComputedStyle(el).transform, animation: getComputedStyle(el).animationName })), { transform: 'none', animation: 'none' });
     }
     const bodyMotion = await page.locator('.mascot').evaluate(el => {
@@ -49,17 +50,19 @@ const path = require('node:path');
       const frames = animation.effect.getKeyframes();
       return { name: style.animationName, duration: style.animationDuration, easing: style.animationTimingFunction, transforms: frames.map(f => f.transform) };
     });
-    assert.equal(bodyMotion.name, 'nova-float'); assert.equal(bodyMotion.duration, '9s');
+    assert.equal(bodyMotion.name, 'nova-float'); assert.equal(bodyMotion.duration, '7s');
     assert.ok(bodyMotion.easing.includes('cubic-bezier'));
     assert.ok(bodyMotion.transforms.every(value => !/translate3d\([^,]*[1-9][^,]*px/.test(value)), 'body has no horizontal travel');
     const gazeRange = await page.locator('#nova').evaluate(el => ({ x: el.style.getPropertyValue('--gaze-x'), y: el.style.getPropertyValue('--gaze-y') }));
     assert.ok(Math.abs(parseFloat(gazeRange.x)) <= 16 && Math.abs(parseFloat(gazeRange.y)) <= 10, 'gaze stays inside the eyes');
     await page.click('[data-view="history"]');
+    await page.locator('#nova-space').evaluate(async el => { await Promise.all(el.getAnimations().map(a => a.finished.catch(() => {}))); });
     assert.equal(await page.locator('#nova-space').evaluate(el => el.parentElement.id), 'nova-dock', 'Nova follows to secondary views');
     const dockCount = await page.evaluate(() => novaAnimationCalls.filter(call => call.eye).length);
     await page.clock.runFor(40000);
     assert.equal(await page.evaluate(() => novaAnimationCalls.filter(call => call.eye).length), dockCount + 8, 'Nova keeps blinking while docked');
     await page.click('[data-view="overview"]');
+    await page.locator('#nova-space').evaluate(async el => { await Promise.all(el.getAnimations().map(a => a.finished.catch(() => {}))); });
     assert.equal(await page.locator('#nova-space').evaluate(el => el.parentElement.className), 'nova-home-slot', 'Nova returns to the overview');
     const overviewCount = await page.evaluate(() => novaAnimationCalls.filter(call => call.eye).length);
     await page.clock.runFor(10000);

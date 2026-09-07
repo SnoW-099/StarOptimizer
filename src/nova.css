@@ -8,26 +8,28 @@
   background: #000; box-shadow: none; overflow: hidden;
   transform-origin: 50% 58%;
   will-change: transform;
-  animation: nova-float 9s cubic-bezier(.45,0,.55,1) infinite;
+  animation: nova-float 7s cubic-bezier(.45,0,.55,1) infinite;
 }
-.nova-button .face { animation: none !important; transform: none !important; scale: none; transition: none; }
+.nova-button .face { animation: none !important; transform: translate(var(--head-x,0px),var(--head-y,0px)) rotate(var(--head-turn,0deg)); scale: none; transition: transform 1050ms cubic-bezier(.22,1,.36,1); }
 .nova-button .eyes { left: 18px; top: 54px; gap: 7px; animation: none !important; transform: none; }
 .nova-button .eye, .scanning .nova-button .eye {
   width: 91px; height: 102px; background: #6b9cf0; border-radius: 50%;
-  box-shadow: none; rotate: -13deg; transform: none;
+  box-shadow: none; rotate: 13deg; transform: scaleX(var(--eye-depth,1));
+  transition: transform 1050ms cubic-bezier(.22,1,.36,1);
   transform-origin: 50% 50%;
 }
-.nova-button .eye:nth-child(2) { rotate: 13deg; transform: none; }
+.nova-button .eye:nth-child(2) { rotate: 13deg; transform: scaleX(calc(2 - var(--eye-depth,1))); }
+.nova-button .nova-lid { position: absolute; inset: -9% -6% 0; border-radius: 0 0 50% 50%; background: #000; transform: translateY(-110%); z-index: 2; will-change: transform; }
 .nova-button .iris {
-  width: 16px; height: 23px; left: 60px; top: 42px; border-radius: 50%;
+  width: 9px; height: 14px; left: 60px; top: 53px; border-radius: 50%;
   background: #f7edee; box-shadow: none;
-  transform: translate(var(--gaze-x),var(--gaze-y));
+  transform: translate(calc(var(--gaze-x) * .28),calc(var(--gaze-y) * .32));
   will-change: transform;
   transition: transform var(--gaze-duration,760ms) var(--gaze-easing,cubic-bezier(.16,1,.3,1));
 }
 .nova-button .eye:nth-child(2) .iris {
   left: 15px;
-  transform: translate(calc(var(--gaze-x) * .92),calc(var(--gaze-y) * .96));
+  transform: translate(calc(var(--gaze-x) * .26),calc(var(--gaze-y) * .3));
 }
 .nova-shine, .nova-star, .cheek, .smile, .eye-light, .eyelid, .pupil,
 .nova-sleep, .nova-aura, .nova-orbit, .nova-shadow, .particle, .nova-pop,
@@ -36,10 +38,8 @@
   animation: none !important; transition: none !important;
 }
 @keyframes nova-float {
-  0%, 100% { transform: translate3d(0,2px,0) rotate(-.35deg) scale(1); }
-  25% { transform: translate3d(0,-2px,0) rotate(.12deg) scale(1.004); }
-  50% { transform: translate3d(0,-5px,0) rotate(.4deg) scale(1.008); }
-  75% { transform: translate3d(0,-1px,0) rotate(.08deg) scale(1.003); }
+  0%, 100% { transform: translate3d(0,5px,0) rotate(-2deg) scale(1); }
+  50% { transform: translate3d(0,-11px,0) rotate(2deg) scale(1.018); }
 }
 @media (prefers-reduced-motion: reduce) {
   #nova-space * { animation: none !important; transition: none !important; }

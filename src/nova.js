@@ -3,23 +3,36 @@ window.createNova = function createNova() {
   const button = document.getElementById('nova');
   const space = document.getElementById('nova-space');
   const eyes = [...button.querySelectorAll('.eye')];
+  const lids = eyes.map(eye => { const lid = document.createElement('span'); lid.className = 'nova-lid'; eye.append(lid); return lid; });
   const reduce = matchMedia('(prefers-reduced-motion: reduce)');
   const BLINK_INTERVAL = 10000;
   let visible = true, simple = false, destroyed = false;
   let timer, lookTimer, frame, deadline = 0, target = { x: 0, y: 0 };
   let pointerUntil = 0, lastLook = -1;
+  let blinkIndex = 0;
   const animations = new Set();
   const allowed = () => visible && !document.hidden && !simple && !reduce.matches && !destroyed;
 
   function blink() {
     if (!allowed()) return;
+    const duration = blinkIndex++ % 2 ? 720 : 360;
     for (const eye of eyes) {
-      const animation = eye.animate([
-        { scale: '1 1', offset: 0 },
-        { scale: '1 .04', offset: .38 },
-        { scale: '1 .04', offset: .48 },
-        { scale: '1 1', offset: 1 }
-      ], { duration: 260, easing: 'cubic-bezier(.4,0,.2,1)' });
+      const shape = eye.animate([
+        { scale: '1 1', translate: '0 0', rotate: '13deg', offset: 0, easing: 'cubic-bezier(.4,0,.7,1)' },
+        { scale: '1 .4', translate: '0 18px', rotate: '0deg', offset: .36 },
+        { scale: '1 .4', translate: '0 18px', rotate: '0deg', offset: .53, easing: 'cubic-bezier(.16,1,.3,1)' },
+        { scale: '1 1', translate: '0 0', rotate: '13deg', offset: 1 }
+      ], { duration });
+      animations.add(shape);
+      shape.finished.catch(() => {}).finally(() => animations.delete(shape));
+    }
+    for (const lid of lids) {
+      const animation = lid.animate([
+        { transform: 'translateY(-110%)', offset: 0, easing: 'cubic-bezier(.4,0,.7,1)' },
+        { transform: 'translateY(-5%)', offset: .36 },
+        { transform: 'translateY(-5%)', offset: .53, easing: 'cubic-bezier(.16,1,.3,1)' },
+        { transform: 'translateY(-110%)', offset: 1 }
+      ], { duration });
       animations.add(animation);
       animation.finished.catch(() => {}).finally(() => animations.delete(animation));
     }
@@ -46,6 +59,11 @@ window.createNova = function createNova() {
       button.style.setProperty('--gaze-easing', motion.easing ?? 'cubic-bezier(.16,1,.3,1)');
       button.style.setProperty('--gaze-x', `${target.x}px`);
       button.style.setProperty('--gaze-y', `${target.y}px`);
+      const strength = Math.max(0, Math.hypot(target.x, target.y) - 5) / 14;
+      button.style.setProperty('--head-x', `${target.x * .47 * strength}px`);
+      button.style.setProperty('--head-y', `${target.y * .5 * strength}px`);
+      button.style.setProperty('--head-turn', `${target.x * .52 * strength}deg`);
+      button.style.setProperty('--eye-depth', `${1 + target.x * .004}`);
     });
   }
   const idleLooks = [
@@ -85,6 +103,7 @@ window.createNova = function createNova() {
     for (const animation of animations) animation.cancel();
     animations.clear();
     button.style.setProperty('--gaze-x', '0px'); button.style.setProperty('--gaze-y', '0px');
+    for (const [key, value] of Object.entries({ 'head-x': '0px', 'head-y': '0px', 'head-turn': '0deg', 'eye-depth': '1' })) button.style.setProperty(`--${key}`, value);
   }
   function refresh() {
     stop();

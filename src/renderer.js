@@ -50,23 +50,34 @@ function button(text, action) {
     b.disabled = true; try { await action(); } catch (e) { toast(e.message); } finally { b.disabled = false; }
   }); return b;
 }
-function moveNova(next, from = novaSpace.getBoundingClientRect()) {
+let novaFlight;
+function moveNova(next, from = $('nova').getBoundingClientRect()) {
   const target = next === 'overview' ? novaHome : novaDock;
   if (novaSpace.parentElement === target) return;
+  novaFlight?.cancel();
+  novaSpace.classList.remove('nova-travelling');
   target.append(novaSpace);
-  const to = novaSpace.getBoundingClientRect();
-  if (!from.width || !to.width) return;
-  const dx = from.left - to.left, dy = from.top - to.top;
-  const scale = Math.min(1.8, Math.max(.55, from.width / to.width));
-  novaSpace.animate([
-    { transform: `translate3d(${dx}px,${dy}px,0) scale(${scale})`, opacity: .72 },
-    { transform: 'translate3d(0,0,0) scale(1)', opacity: 1 }
-  ], { duration: 680, easing: 'cubic-bezier(.22,1,.36,1)' });
+  const to = $('nova').getBoundingClientRect();
+  if (!from.width || !to.width || document.body.classList.contains('simple') || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  document.body.append(novaSpace);
+  novaSpace.classList.add('nova-travelling');
+  const pose = rect => `translate3d(${rect.left}px,${rect.top}px,0) scale(${rect.width / 223})`;
+  const flight = novaSpace.animate([
+    { transform: pose(from) },
+    { transform: pose(to) }
+  ], { duration: 1050, easing: 'cubic-bezier(.4,0,.18,1)', fill: 'both' });
+  novaFlight = flight;
+  flight.finished.then(() => {
+    if (novaFlight !== flight) return;
+    target.append(novaSpace); novaSpace.classList.remove('nova-travelling');
+    flight.cancel(); novaFlight = null;
+  }).catch(() => {});
 }
 function show(next) {
   if (operating || !labels[next]) return;
-  const previousNovaPosition = novaSpace.getBoundingClientRect();
+  const previousNovaPosition = $('nova').getBoundingClientRect();
   view = next;
+  window.scrollTo({ top: 0, behavior: 'instant' });
   document.querySelectorAll('.view').forEach(el => el.hidden = el.id !== view);
   moveNova(view, previousNovaPosition);
   nova.context({ visible: true });
