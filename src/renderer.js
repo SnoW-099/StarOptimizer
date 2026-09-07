@@ -1,107 +1,303 @@
 const $ = id => document.getElementById(id);
 const api = window.star;
-let snapshot, journal = [], toastTimer;
+let snapshot, journal = [], draft = {}, token, analysisTask, operating = false, toastTimer, liveTimer, view = 'overview';
 const GB = n => (Number(n) / 1073741824).toLocaleString('es-ES', { maximumFractionDigits: 1 });
-const labels = { overview: ['Un buen día para tu PC.', 'Conoce tu equipo. Mejora lo que importa.', 'Vista general'], recommendations: ['Ajustes con sentido.', 'Elige cada cambio con la información por delante.', 'Optimización'], startup: ['Empieza más ligero.', 'Decide qué aplicaciones necesitas al encender tu equipo.', 'Inicio de Windows'], processes: ['Mira qué está trabajando.', 'Una fotografía real del uso de memoria de tus aplicaciones.', 'Procesos'], history: ['Siempre puedes volver.', 'Consulta y restaura los cambios de energía de StarOptimizer.', 'Historial de cambios'] };
-function toast(message) { $('toast').textContent = message; $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidden = true, 9000); }
+const active = e => ['pending', 'applied', 'recovering', 'recovery-needed'].includes(e.status);
+const visual = {
+  animations: ['Reducir animaciones de interfaz', 'Menos movimiento en aplicaciones que respetan este ajuste de Windows.'],
+  menuAnimation: ['Menús más directos', 'Desactiva la transición al abrir menús compatibles.'],
+  comboAnimation: ['Listas sin transiciones', 'Desactiva el efecto de apertura de las listas desplegables compatibles.']
+};
+const labels = {
+  overview: ['Tu equipo, en calma.', 'Entiende qué necesita. Ajusta solo lo que importa.', 'UN POCO MÁS SIMPLE.'],
+  recommendations: ['Pequeños ajustes. A tu medida.', 'Prepara una selección. Revísala. Tú tienes la última palabra.', 'LA FLUIDEZ EMPIEZA AQUÍ.'],
+  startup: ['Un buen comienzo.', 'Menos aplicaciones al iniciar sesión, más espacio para lo que necesitas.', 'ELIGE QUIÉN TE ACOMPAÑA.'],
+  processes: ['Cada recurso, a la vista.', 'Una lectura de tu equipo para decidir con información.', 'SIN CERRAR TUS PROGRAMAS.'],
+  history: ['Puedes volver atrás.', 'Tus cambios y sus valores originales, guardados en este equipo.', 'TODO BAJO TU CONTROL.']
+};
+function toast(message) {
+  $('toast-message').textContent = message; $('toast').hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidden = true, 12000);
+}
 async function call(method, ...args) {
   if (!api) throw Error('Abre StarOptimizer como aplicación de escritorio para acceder a Windows.');
   const response = await api[method](...args);
   if (!response.ok) throw Error(response.error);
   return response.data;
 }
-function show(view) {
-  document.querySelectorAll('.view').forEach(el => el.hidden = el.id !== view);
-  document.querySelectorAll('.nav').forEach(el => el.classList.toggle('active', el.dataset.view === view));
-  [$('title').textContent, $('subtitle').textContent, $('breadcrumb').textContent] = labels[view];
-  if (view === 'history') loadHistory();
+function node(tag, text, className) {
+  const el = document.createElement(tag); if (text !== undefined) el.textContent = text; if (className) el.className = className; return el;
 }
+function empty(container, message) { container.replaceChildren(node('p', message, 'empty')); }
 function row(title, detail, action) {
-  const el = document.createElement('div'); el.className = 'row';
-  const body = document.createElement('div'), strong = document.createElement('strong'), p = document.createElement('p');
-  strong.textContent = title; p.textContent = detail; body.append(strong, p); el.append(body);
-  if (action) el.append(action);
-  return el;
+  const el = node('div', undefined, 'row'), body = node('div');
+  body.append(node('strong', title), node('p', detail)); el.append(body); if (action) el.append(action); return el;
 }
-function empty(container, message) { const p = document.createElement('p'); p.className = 'empty'; p.textContent = message; container.replaceChildren(p); }
-function badge(text) { const s = document.createElement('span'); s.textContent = text; return s; }
 function button(text, action) {
-  const b = document.createElement('button'); b.className = 'button secondary'; b.textContent = text;
-  b.addEventListener('click', async () => { b.disabled = true; try { await action(); } catch (e) { toast(e.message); } finally { b.disabled = false; } });
-  return b;
+  const b = node('button', text, 'button secondary');
+  b.addEventListener('click', async () => {
+    if (operating) return;
+    b.disabled = true; try { await action(); } catch (e) { toast(e.message); } finally { b.disabled = false; }
+  }); return b;
+}
+function show(next) {
+  if (operating || !labels[next]) return;
+  view = next;
+  document.querySelectorAll('.view').forEach(el => el.hidden = el.id !== view);
+  document.querySelectorAll('.nav').forEach(el => {
+    el.classList.toggle('active', el.dataset.view === view);
+    if (el.dataset.view === view) el.setAttribute('aria-current', 'page'); else el.removeAttribute('aria-current');
+  });
+  [$('title').textContent, $('subtitle').textContent, $('eyebrow').textContent] = labels[view];
+  window.scrollTo({ top: 0 });
+  if (view === 'history') loadHistory();
+  scheduleLive();
+}
+function isLocked(key) { return !journal || journal.some(e => active(e) && (e.status !== 'applied' || e.changes.some(c => c.key === key && c.state !== 'restored'))); }
+function selection() {
+  if (!snapshot) return {};
+  return Object.fromEntries(Object.entries(draft).filter(([key, value]) => value !== snapshot.configuration.values[key] && !isLocked(key)));
+}
+function selectionCount() {
+  const count = Object.keys(selection()).length;
+  $('selection-count').textContent = count ? `${count} ${count === 1 ? 'ajuste preparado' : 'ajustes preparados'}` : 'Sin cambios';
+  $('selection-summary').textContent = !journal ? 'El historial no está disponible. Resuelve el error antes de modificar ajustes.' : !snapshot ? 'Analiza tu PC para ver los ajustes compatibles.' : journal.some(e => active(e) && e.status !== 'applied') ? 'Hay una recuperación pendiente. Ábrela en Historial antes de continuar.' : count ? 'El siguiente paso muestra los valores actuales y los nuevos, antes de aplicar nada.' : 'Tu selección coincide con Windows. Elige un perfil o marca los ajustes que quieras preparar.';
+  $('review').disabled = !count || !journal || operating;
+}
+function renderConfiguration() {
+  const select = $('power-select'); select.replaceChildren();
+  if (!snapshot) { select.append(node('option', 'Analiza para ver los planes')); select.disabled = true; selectionCount(); return; }
+  const { plans, values } = snapshot.configuration;
+  if (!plans.length) { const opt = node('option', 'No disponible en este equipo'); opt.value = ''; select.append(opt); }
+  for (const plan of plans) {
+    const duplicate = plans.filter(p => p.name === plan.name).length > 1;
+    const opt = node('option', `${plan.name}${duplicate ? ` · ${plan.id.slice(0, 8)}` : ''}${plan.active ? ' · actual' : ''}`);
+    opt.value = plan.id; select.append(opt);
+  }
+  select.value = draft.power || values.power || '';
+  select.disabled = !plans.length || isLocked('power');
+  $('power-note').textContent = isLocked('power') ? 'Restaura el cambio anterior desde Historial para elegir otro plan.' : snapshot.onBattery ? 'Estás usando batería. Un plan exigente puede reducir la autonomía.' : 'Solo activamos planes existentes. Sus valores internos no se modifican.';
+  const container = $('visual-options'); container.replaceChildren();
+  for (const [key, [title, detail]] of Object.entries(visual)) {
+    const unavailable = typeof values[key] !== 'boolean';
+    const locked = isLocked(key);
+    const label = node('label', undefined, `visual-option${unavailable ? ' unavailable' : ''}`);
+    const input = node('input'); input.type = 'checkbox'; input.id = `option-${key}`;
+    input.checked = (draft[key] ?? values[key]) === false;
+    input.disabled = unavailable || locked || values[key] === false;
+    const copy = node('span'); copy.append(node('strong', title), node('small', detail), node('em', unavailable ? 'No disponible en este equipo' : locked ? 'Guardado en Historial · puedes restaurarlo' : values[key] === false ? 'Ya está desactivada en Windows' : 'Ahora está activada en Windows'));
+    input.addEventListener('change', () => { draft[key] = !input.checked; clearProfile(); selectionCount(); });
+    label.append(input, copy); container.append(label);
+  }
+  selectionCount();
+}
+function clearProfile() { document.querySelectorAll('.profile').forEach(b => b.classList.remove('selected')); }
+async function prepareProfile(profile) {
+  if (operating) return;
+  if (!snapshot && !await analyze()) return;
+  draft = {}; clearProfile();
+  const { plans, values } = snapshot.configuration;
+  if (profile === 'fluid') {
+    for (const key of Object.keys(visual)) if (values[key] === true && !isLocked(key)) draft[key] = false;
+  } else {
+    const id = profile === 'daily' ? '381b4222-f694-41f0-9685-ff5bb260df2e' : '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c';
+    const plan = plans.find(p => p.id === id) || plans.find(p => profile === 'daily' ? /^(equilibrado|balanced)$/i.test(p.name) : /^(alto rendimiento|high performance)$/i.test(p.name));
+    if (!plan) toast('Este perfil no tiene un plan compatible en tu equipo. Puedes elegir uno de los planes disponibles.');
+    else if (isLocked('power')) toast('Restaura primero el cambio de energía anterior desde Historial.');
+    else draft.power = plan.id;
+    if (profile === 'performance' && snapshot.onBattery) toast('Estás usando batería. Revisa el consumo y conecta el cargador antes de usar un plan exigente.');
+  }
+  document.querySelector(`[data-profile="${profile}"]`).classList.add('selected');
+  renderConfiguration();
+  if (!Object.keys(selection()).length) toast('No hay cambios nuevos para este perfil. Los ajustes ya coinciden, no están disponibles o tienen una restauración pendiente.');
+}
+function valueLabel(change, which) {
+  if (change[`${which}Label`]) return change[`${which}Label`];
+  const value = change[which];
+  return typeof value === 'boolean' ? value ? 'Activadas' : 'Desactivadas' : snapshot?.configuration.plans.find(p => p.id === value)?.name || value;
 }
 async function loadHistory() {
   try {
     journal = await call('history');
     const container = $('history-list'); container.replaceChildren();
-    if (!journal.length) empty(container, 'Sin cambios todavía. Tu configuración sigue tal como estaba.');
-    journal.forEach(entry => {
-      const restored = entry.status === 'restored';
-      container.append(row(restored ? 'Plan original restaurado' : entry.status === 'applied' ? 'Plan de energía modificado' : 'Cambio pendiente de verificar', `${new Date(entry.at).toLocaleString('es-ES')} · Plan original: ${entry.before}`, restored ? badge('Restaurado ✓') : button('Restaurar original', async () => { await call('undo', entry.id); toast('Plan original restaurado y verificado.'); await loadHistory(); await analyze(); })));
-    });
-    renderPlans();
-  } catch (e) { empty($('history-list'), e.message); journal = null; renderPlans(); }
+    if (!journal.length) empty(container, 'Todavía no has hecho cambios. Cuando los hagas, tendrás aquí un camino de vuelta.');
+    for (const entry of journal) {
+      const pending = active(entry), failed = pending && entry.status !== 'applied';
+      const article = node('article', undefined, 'history-entry'), top = node('div', undefined, 'history-top');
+      const status = { applied: 'Aplicado y verificado', restored: 'Restaurado', 'rolled-back': 'Recuperado automáticamente', pending: 'Operación interrumpida', recovering: 'Restauración interrumpida', 'recovery-needed': 'Requiere recuperación' };
+      top.append(node('strong', entry.title), node('span', status[entry.status], `tag${failed ? ' warning' : ''}`));
+      article.append(top, node('p', new Date(entry.at).toLocaleString('es-ES')));
+      const changes = node('div', undefined, 'history-changes');
+      for (const change of entry.changes) changes.append(node('span', `${change.label || change.key} · ${valueLabel(change, 'before')} → ${valueLabel(change, 'after')}${change.state === 'restored' ? ' · restaurado' : ''}`));
+      article.append(changes);
+      if (entry.errors?.length) article.append(node('p', entry.errors.join(' '), 'history-error'));
+      if (pending) article.append(button(failed ? 'Reintentar recuperación' : 'Restaurar valores originales', () => performMutation('Restaurando valores originales', () => call('undo', entry.id))));
+      container.append(article);
+    }
+    $('history-dot').hidden = !journal.some(active);
+  } catch (e) { journal = null; empty($('history-list'), e.message); $('history-dot').hidden = false; }
+  renderConfiguration();
 }
-function renderPlans() {
+function metric(id, value, unit) { const el = $(id); el.replaceChildren(document.createTextNode(`${value} `), node('em', unit)); }
+function renderTelemetry(cpu, memory) {
+  metric('cpu-value', cpu === null ? '—' : cpu, '%'); $('cpu-bar').value = cpu ?? 0;
+  const used = memory.total - memory.free;
+  metric('memory-value', GB(used), 'GB'); $('memory-bar').value = used / memory.total * 100;
+  $('memory-detail').textContent = `${GB(memory.total)} GB en total · ${GB(memory.free)} GB disponibles`;
+}
+function filterLists() {
   if (!snapshot) return;
-  const container = $('plans'); container.replaceChildren();
-  const pending = !journal || journal.some(x => ['pending', 'applied', 'undoing'].includes(x.status));
-  if (!snapshot.plans.length) empty(container, 'No se pudieron consultar los planes de energía.');
-  snapshot.plans.forEach(plan => {
-    const action = plan.active ? badge('Activo ✓') : button(pending ? 'Restaura desde Historial' : 'Elegir plan', async () => {
-      if (pending) return show('history');
-      try {
-        const result = await call('apply', plan.id);
-        if (result) { toast('Cambio aplicado y verificado. Puedes deshacerlo desde Historial.'); await analyze(); }
-      } finally { await loadHistory(); }
-    });
-    container.append(row(plan.name, plan.active ? 'Tu plan de energía actual.' : 'Solo se activa este plan; no se editan sus valores.', action));
-  });
+  const list = $('process-list'); list.replaceChildren();
+  const query = $('process-search').value.trim().toLocaleLowerCase('es');
+  snapshot.processes.filter(p => p.ProcessName.toLocaleLowerCase('es').includes(query)).forEach(p => list.append(row(p.ProcessName, `${p.Count} ${p.Count === 1 ? 'proceso' : 'procesos'} · memoria residente`, node('span', `${Math.round(p.WorkingSet64 / 1048576).toLocaleString('es-ES')} MB`))));
+  if (!list.children.length) empty(list, snapshot.errors.includes('processes') ? 'Windows no permitió consultar los procesos.' : 'No hay procesos que coincidan con la búsqueda.');
+  const startup = $('startup-list'); startup.replaceChildren();
+  const startupQuery = $('startup-search').value.trim().toLocaleLowerCase('es');
+  snapshot.startup.filter(p => p.Name.toLocaleLowerCase('es').includes(startupQuery)).forEach(p => startup.append(row(p.Name, p.Location, node('span', 'Revisar en Windows'))));
+  if (!startup.children.length) empty(startup, snapshot.errors.includes('startup') ? 'Windows no permitió consultar el inicio.' : 'No hay entradas que coincidan con la búsqueda.');
 }
 function render() {
-  const s = snapshot;
-  const samples = s.cpu.map(x => x.LoadPercentage).filter(x => typeof x === 'number');
-  const cpu = samples.length ? Math.round(samples.reduce((a, b) => a + b, 0) / samples.length) : null;
-  $('cpu-value').textContent = cpu === null ? 'No disponible' : `${cpu} %`;
-  $('cpu-bar').value = cpu || 0; $('cpu-detail').textContent = s.cpu.map(x => x.Name).join(' · ') || 'Windows no proporcionó datos';
-  $('cpu-detail').title = $('cpu-detail').textContent;
-  const used = s.memory.total - s.memory.free;
-  $('memory-value').textContent = `${GB(used)} GB`; $('memory-bar').value = used / s.memory.total * 100;
-  $('memory-detail').textContent = `${GB(s.memory.total)} GB en total · ${GB(s.memory.free)} GB disponibles`;
+  const s = snapshot, cpu = s.cpu[0]?.LoadPercentage ?? null;
+  renderTelemetry(cpu, s.memory);
+  $('cpu-detail').textContent = s.cpu[0]?.Name || 'Windows no proporcionó datos'; $('cpu-detail').title = $('cpu-detail').textContent;
   const total = s.disks.reduce((n, d) => n + Number(d.Size || 0), 0), free = s.disks.reduce((n, d) => n + Number(d.FreeSpace || 0), 0);
-  $('disk-value').textContent = total ? `${GB(free)} GB` : 'No disponible'; $('disk-bar').value = total ? (total - free) / total * 100 : 0;
+  metric('disk-value', total ? GB(free) : '—', 'GB'); $('disk-bar').value = total ? free / total * 100 : 0;
   $('disk-detail').textContent = total ? `Libres de ${GB(total)} GB · ${s.disks.length} unidades` : 'Windows no proporcionó datos';
-  $('last-scan').textContent = `Última lectura · ${new Date(s.at).toLocaleTimeString('es-ES')}`;
-  $('hero-description').textContent = s.errors.length ? 'Análisis parcial. Algunas lecturas no están disponibles; puedes volver a intentarlo.' : 'Ya tenemos una foto de tu equipo. Revisa sus recursos y elige qué quieres mejorar.';
-  $('scan-status').textContent = s.errors.length ? `No disponible: ${s.errors.join(', ')}` : 'Análisis completado · Ningún ajuste modificado';
-  const processes = $('process-list'); processes.replaceChildren();
-  s.processes.forEach(p => processes.append(row(p.ProcessName, `PID ${p.Id}`, badge(`${Math.round(p.WorkingSet64 / 1048576).toLocaleString('es-ES')} MB`))));
-  if (!s.processes.length) empty(processes, 'No hay datos de procesos disponibles.');
-  const startup = $('startup-list'); startup.replaceChildren();
-  s.startup.forEach(p => startup.append(row(p.Name, p.Location, badge('Revisar en Windows'))));
-  if (!s.startup.length) empty(startup, s.errors.includes('startup') ? 'Windows no permitió consultar el inicio.' : 'Windows no reportó entradas mediante este inventario.');
+  $('last-scan').textContent = `Última lectura completa · ${new Date(s.at).toLocaleTimeString('es-ES')}`;
+  $('hero-description').textContent = s.errors.length ? 'Hay lecturas que Windows no ha podido completar. Revisa los resultados disponibles o vuelve a analizar.' : 'Ya conozco un poco mejor tu equipo. Vamos a elegir los ajustes que encajan contigo.';
+  $('scan-status').textContent = s.errors.length ? 'Análisis parcial · Revisa los detalles en Optimizar' : 'Análisis completado. Ningún ajuste modificado por el análisis.';
+  $('machine-status').textContent = s.onBattery ? '◦ Usando batería' : '◦ Conectado a la corriente';
+  $('go-optimize').hidden = false;
+  $('startup-summary').textContent = `${s.startup.length} entradas reportadas por Windows.`;
   const disks = $('disk-list'); disks.replaceChildren();
-  s.disks.forEach(d => disks.append(row(d.DeviceID, `${GB(d.FreeSpace)} GB libres de ${GB(d.Size)} GB`, badge(Number(d.Size) ? `${Math.round(d.FreeSpace / d.Size * 100)} % libre` : 'No disponible'))));
+  s.disks.forEach(d => disks.append(row(d.DeviceID, `${GB(d.FreeSpace)} GB libres de ${GB(d.Size)} GB`, node('span', Number(d.Size) ? `${Math.round(d.FreeSpace / d.Size * 100)} % libre` : 'No disponible'))));
   if (!s.disks.length) empty(disks, 'No se pudieron consultar las unidades.');
+  const hardware = $('hardware-list'); hardware.replaceChildren(row(s.cpu[0]?.Name || 'Procesador no disponible', `${s.platform} · ${Math.floor(s.uptime / 3600)} h desde el último arranque`));
+  s.gpu.forEach(g => hardware.append(row(g.Name, `Controlador ${g.DriverVersion || 'no disponible'}`)));
   const insights = $('insights'); insights.replaceChildren();
-  if (used / s.memory.total > .85) insights.append(row('La memoria está bastante ocupada', 'Se utiliza más del 85 % de la RAM. Revisa los procesos y cierra solo apps que reconozcas, después de guardar tu trabajo.', button('Ver procesos', () => show('processes'))));
-  if (cpu !== null && cpu > 80) insights.append(row('La CPU está trabajando mucho', 'Esta lectura supera el 80 %. Espera a que terminen las tareas actuales y repite el análisis; un pico aislado puede ser normal.'));
-  s.disks.filter(d => Number(d.Size) > 0 && d.FreeSpace / d.Size < .15).forEach(d => insights.append(row(`Poco espacio libre en ${d.DeviceID}`, 'Queda menos del 15 % de espacio. Revisa qué necesitas y considera mover archivos a otra unidad. StarOptimizer no los borra.', button('Ver unidades', () => show('processes')))));
-  if (s.startup.length > 0) insights.append(row(`${s.startup.length} entradas de inicio para revisar`, 'No todas tienen por qué estar habilitadas. Comprueba en Windows las aplicaciones que no necesitas al iniciar sesión.', button('Revisar inicio', () => show('startup'))));
-  if (s.errors.length) insights.append(row('Diagnóstico incompleto', 'Algunas consultas no están disponibles. Repite el análisis antes de sacar conclusiones.'));
-  if (!insights.children.length) insights.append(row('Sin alertas en estas lecturas', 'No se detecta presión alta de CPU, RAM o espacio en esta muestra. Esto no es una comprobación de salud del hardware.'));
-  renderPlans();
+  let signals = 0;
+  if ((s.memory.total - s.memory.free) / s.memory.total > .85) { signals++; insights.append(row('La memoria está bastante ocupada', 'Más del 85 % en esta lectura. Revisa las apps con mayor consumo y guarda tu trabajo antes de cerrar las que no necesites.', button('Ver recursos', () => show('processes')))); }
+  if (cpu !== null && cpu > 80) { signals++; insights.append(row('La CPU está trabajando mucho', 'Más del 80 % en esta muestra. Repite el análisis cuando terminen las tareas actuales; un pico aislado es normal.')); }
+  s.disks.filter(d => d.Size > 0 && d.FreeSpace / d.Size < .15).forEach(d => { signals++; insights.append(row(`Poco espacio en ${d.DeviceID}`, 'Menos del 15 % libre. Considera mover archivos que conozcas a otra unidad. StarOptimizer no los borra.', button('Ver unidades', () => show('processes')))); });
+  if (!signals) insights.append(row('Sin presión alta en las lecturas disponibles', 'No se detectan los umbrales de uso alto de CPU, RAM o poco espacio en esta muestra. No es una prueba de salud del hardware.', node('span', 'Sin alertas')));
+  if (s.startup.length) insights.append(row('Revisa lo que arranca contigo', `${s.startup.length} entradas en el inventario. Confirma cuáles están activadas en Windows antes de decidir.`, button('Revisar inicio', () => show('startup'))));
+  const missing = { cpu: 'CPU', disks: 'discos', processes: 'procesos', startup: 'inicio', plans: 'energía', gpu: 'GPU', configuration: 'algunos ajustes de Windows' };
+  if (s.errors.length) insights.append(row('Lecturas incompletas', `No disponibles: ${s.errors.map(k => missing[k] || k).join(', ')}. No se asume que estos componentes estén bien ni mal.`));
+  $('recommendation-summary').textContent = signals ? `${signals} ${signals === 1 ? 'señal para revisar' : 'señales para revisar'} · Tú decides el siguiente paso.` : 'Tu diagnóstico y los ajustes compatibles.';
+  filterLists(); renderConfiguration();
 }
-async function analyze() {
-  $('scan').disabled = true; $('scan').textContent = 'Analizando tu equipo…'; document.body.classList.add('scanning');
-  $('scan-status').textContent = 'Consultando Windows. Puede tardar unos segundos…';
-  try { snapshot = await call('scan'); render(); }
-  catch (e) { $('scan-status').textContent = 'No se pudo completar el análisis. Inténtalo de nuevo.'; toast(e.message); }
-  finally { $('scan').disabled = false; $('scan').textContent = '✧ Volver a analizar →'; document.body.classList.remove('scanning'); }
+async function performAnalysis() {
+  $('scan').disabled = true; $('scan').textContent = 'Analizando…';
+  document.body.classList.add('scanning'); $('nova-caption').textContent = 'Conociendo tu equipo…';
+  $('scan-status').textContent = 'Consultando Windows. Puede tardar unos segundos.';
+  clearTimeout(liveTimer);
+  try {
+    snapshot = await call('scan');
+    for (const key of Object.keys(draft)) if (snapshot.configuration.values[key] == null || key === 'power' && !snapshot.configuration.plans.some(p => p.id === draft[key])) delete draft[key];
+    render(); await loadHistory(); return true;
+  } catch (e) { $('scan-status').textContent = 'No se pudo completar el análisis. Puedes reintentarlo.'; toast(e.message); return false; }
+  finally {
+    $('scan').disabled = false; $('scan').textContent = 'Volver a analizar ↻';
+    document.body.classList.remove('scanning'); $('nova-caption').textContent = 'Nova está contigo';
+    scheduleLive();
+  }
+}
+function analyze() {
+  if (!analysisTask) analysisTask = performAnalysis().finally(() => analysisTask = null);
+  return analysisTask;
+}
+function setOperating(value, title = '') {
+  operating = value; document.body.classList.toggle('operation-active', value);
+  document.querySelector('main').inert = value; document.querySelector('.rail').inert = value;
+  $('operation').hidden = !value; $('operation-title').textContent = title;
+  clearTimeout(liveTimer); if (!value) scheduleLive();
+}
+async function performMutation(title, task) {
+  if (operating) return;
+  setOperating(true, title);
+  let failure;
+  try { if (analysisTask) await analysisTask; const result = await task(); toast(result.restored ? 'Valores originales restaurados y verificados.' : `${result.changed} ajustes aplicados y verificados. Puedes restaurarlos desde Historial.`); }
+  catch (e) { failure = e; }
+  finally {
+    draft = {}; clearProfile();
+    await analyze(); await loadHistory(); setOperating(false);
+    if (failure) { toast(failure.message); show('history'); }
+  }
+}
+async function review() {
+  if (operating) return;
+  $('review').disabled = true;
+  try {
+    const prepared = await call('preview', selection());
+    if (!prepared.changes.length) return toast('Los ajustes ya coinciden con Windows. No hace falta cambiar nada.');
+    token = prepared.token;
+    $('review-list').replaceChildren(...prepared.changes.map(c => row(c.label, `${c.beforeLabel} → ${c.afterLabel}`)));
+    $('review-warning').textContent = prepared.changes.some(c => c.key === 'power') ? `${snapshot.onBattery ? 'Estás usando batería. ' : ''}Cambiar la energía puede aumentar consumo, temperatura y ruido. No garantiza más FPS.` : 'Se reduce el movimiento de controles compatibles. El efecto depende de cada aplicación y no mejora necesariamente el rendimiento de los juegos.';
+    $('confirm-apply').textContent = `Aplicar ${prepared.changes.length} ${prepared.changes.length === 1 ? 'ajuste' : 'ajustes'}`;
+    $('review-dialog').showModal();
+  } catch (e) { toast(e.message); }
+  finally { selectionCount(); }
+}
+function scheduleLive() {
+  clearTimeout(liveTimer);
+  if (!$('live').checked || document.hidden || view !== 'overview' || operating) { $('live-status').textContent = $('live').checked ? 'en pausa' : 'cada 5 s'; return; }
+  $('live-status').textContent = 'CPU y RAM · cada 5 s';
+  liveTimer = setTimeout(async () => {
+    try {
+      if (!analysisTask && !operating && !document.hidden && view === 'overview' && $('live').checked) {
+        const data = await call('telemetry');
+        if ($('live').checked && !document.hidden && view === 'overview' && !operating) { renderTelemetry(data.cpu, data.memory); $('live-status').textContent = `CPU y RAM · ${new Date(data.at).toLocaleTimeString('es-ES')}`; }
+      }
+    } catch (e) { $('live').checked = false; toast(e.message); }
+    finally { scheduleLive(); }
+  }, 5000);
 }
 document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => show(b.dataset.view)));
 document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => show(b.dataset.go)));
+document.querySelectorAll('[data-profile]').forEach(b => b.addEventListener('click', () => prepareProfile(b.dataset.profile)));
 document.querySelectorAll('[data-settings]').forEach(b => b.addEventListener('click', async () => { try { await call('settings', b.dataset.settings); } catch (e) { toast(e.message); } }));
-$('scan').addEventListener('click', analyze);
-$('export').addEventListener('click', async () => { try { if (await call('export')) toast('Diagnóstico guardado. Contiene nombres de procesos y entradas de inicio; revísalo antes de compartirlo.'); } catch (e) { toast(e.message); } });
+for (const id of ['scan', 'refresh-analysis', 'refresh-processes']) $(id).addEventListener('click', analyze);
+$('power-select').addEventListener('change', () => { draft.power = $('power-select').value; clearProfile(); selectionCount(); });
+$('reset-selection').addEventListener('click', () => { draft = {}; clearProfile(); renderConfiguration(); });
+$('review').addEventListener('click', review);
+for (const id of ['cancel-review', 'close-review']) $(id).addEventListener('click', () => { token = null; $('review-dialog').close(); });
+$('review-dialog').addEventListener('cancel', () => token = null);
+$('confirm-apply').addEventListener('click', async () => {
+  if (!token || operating) return;
+  const approvedToken = token; token = null; $('review-dialog').close();
+  await performMutation('Aplicando y verificando ajustes', () => call('apply', approvedToken));
+});
+for (const id of ['startup-search', 'process-search']) $(id).addEventListener('input', filterLists);
+$('live').addEventListener('change', scheduleLive);
+$('dismiss-toast').addEventListener('click', () => $('toast').hidden = true);
+$('export').addEventListener('click', async () => { try { if (await call('export')) toast('Diagnóstico guardado. Incluye procesos, inicio e historial. Revísalo antes de compartirlo.'); } catch (e) { toast(e.message); } });
+function appearance(simple) {
+  document.body.classList.toggle('simple', simple); $('appearance').setAttribute('aria-pressed', String(simple));
+  $('appearance').querySelector('span').textContent = simple ? 'Sencilla' : 'Cristal';
+  $('appearance').title = simple ? 'Volver a la apariencia de cristal' : 'Usar apariencia sencilla, con menos efectos';
+  try { localStorage.setItem('star-simple', String(simple)); } catch { /* Appearance remains usable without storage. */ }
+}
+$('appearance').addEventListener('click', () => appearance(!document.body.classList.contains('simple')));
+try { appearance(localStorage.getItem('star-simple') === 'true'); } catch { /* Default appearance. */ }
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+let gazeFrame, pointer, greetTimer;
+document.addEventListener('pointermove', e => {
+  if (view !== 'overview' || document.hidden || reduceMotion.matches || document.body.classList.contains('simple')) return;
+  pointer = { x: e.clientX, y: e.clientY };
+  if (gazeFrame) return;
+  gazeFrame = requestAnimationFrame(() => {
+    const rect = $('nova').getBoundingClientRect();
+    $('nova').style.setProperty('--gaze-x', `${Math.max(-7, Math.min(7, (pointer.x - rect.left - rect.width / 2) / 70))}px`);
+    $('nova').style.setProperty('--gaze-y', `${Math.max(-5, Math.min(5, (pointer.y - rect.top - rect.height / 2) / 80))}px`);
+    gazeFrame = null;
+  });
+}, { passive: true });
+$('nova').addEventListener('click', () => {
+  clearTimeout(greetTimer); document.body.classList.remove('greeting');
+  requestAnimationFrame(() => document.body.classList.add('greeting'));
+  $('nova-caption').textContent = 'Un paso a la vez. Estoy contigo.';
+  greetTimer = setTimeout(() => { document.body.classList.remove('greeting'); $('nova-caption').textContent = 'Nova está contigo'; }, 2500);
+});
+document.addEventListener('visibilitychange', () => { document.body.classList.toggle('paused', document.hidden); scheduleLive(); });
+api?.onBusyClose(() => toast('Estamos verificando un cambio. Espera a que termine antes de cerrar la app.'));
 loadHistory();

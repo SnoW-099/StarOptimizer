@@ -31,15 +31,59 @@ async function cpuSample() {
   });
   return [{ Name: second[0]?.model || 'Procesador', LoadPercentage: elapsed > 0 ? Math.max(0, Math.min(100, Math.round((1 - idle / elapsed) * 100))) : null }];
 }
+const SPI = {
+  animations: [0x1042, 0x1043],
+  menuAnimation: [0x1002, 0x1003],
+  comboAnimation: [0x1004, 0x1005]
+};
+const nativeUI = `Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class StarVisual {
+ [DllImport("user32.dll", EntryPoint="SystemParametersInfoW", SetLastError=true)]
+ [return: MarshalAs(UnmanagedType.Bool)]
+ public static extern bool Get(uint action, uint param, out int value, uint flags);
+ [DllImport("user32.dll", EntryPoint="SystemParametersInfoW", SetLastError=true)]
+ [return: MarshalAs(UnmanagedType.Bool)]
+ public static extern bool Set(uint action, uint param, IntPtr value, uint flags);
+}
+'@; `;
+async function visualState() {
+  return ps(nativeUI + `$result = @{}; ` + Object.entries(SPI).map(([key, [get]]) => `$v = 0; if ([StarVisual]::Get(${get},0,[ref]$v,0)) { $result['${key}'] = [bool]$v } else { $result['${key}'] = $null }; `).join('') + '$result | ConvertTo-Json -Compress');
+}
+async function setVisual(key, value) {
+  if (!Object.hasOwn(SPI, key) || typeof value !== 'boolean') throw Error('Ajuste visual no válido.');
+  await ps(nativeUI + `if (-not [StarVisual]::Set(${SPI[key][1]},0,[IntPtr]${value ? 1 : 0},3)) { throw 'Windows rechazó el ajuste visual' }; $true | ConvertTo-Json`);
+}
+async function optimizationState() {
+  const results = await Promise.allSettled([plans(), visualState()]);
+  const available = results[0].status === 'fulfilled' ? results[0].value : [];
+  const visual = results[1].status === 'fulfilled' ? results[1].value : {};
+  return { plans: available, values: { power: available.find(x => x.active)?.id || null, animations: visual.animations ?? null, menuAnimation: visual.menuAnimation ?? null, comboAnimation: visual.comboAnimation ?? null } };
+}
+const optimizationAdapter = {
+  snapshot: optimizationState,
+  set: async (key, value) => {
+    if (key === 'power') {
+      if (!GUID.test(value) || !(await plans()).some(x => x.id === value)) throw Error('Plan no disponible.');
+      await power(['/setactive', value]);
+    } else await setVisual(key, value);
+  }
+};
+async function telemetry() {
+  const cpu = await cpuSample();
+  return { at: new Date().toISOString(), cpu: cpu[0].LoadPercentage, memory: { total: os.totalmem(), free: os.freemem() } };
+}
 async function scan() {
   const sections = await Promise.allSettled([
     cpuSample(),
     ps('Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | Select-Object DeviceID,Size,FreeSpace | ConvertTo-Json -Compress'),
-    ps('Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -First 12 ProcessName,Id,WorkingSet64 | ConvertTo-Json -Compress'),
+    ps('Get-Process | Group-Object ProcessName | ForEach-Object { [PSCustomObject]@{ ProcessName = $_.Name; Count = $_.Count; WorkingSet64 = ($_.Group | Measure-Object WorkingSet64 -Sum).Sum } } | Sort-Object WorkingSet64 -Descending | Select-Object -First 30 | ConvertTo-Json -Compress'),
     ps('Get-CimInstance Win32_StartupCommand | Select-Object Name,Location | ConvertTo-Json -Compress'),
-    plans()
+    plans(),
+    ps('Get-CimInstance Win32_VideoController | Select-Object Name,DriverVersion | ConvertTo-Json -Compress')
   ]);
-  const names = ['cpu', 'disks', 'processes', 'startup', 'plans'];
+  const names = ['cpu', 'disks', 'processes', 'startup', 'plans', 'gpu'];
   const result = { at: new Date().toISOString(), platform: `Windows ${os.release()}`, memory: { total: os.totalmem(), free: os.freemem() }, uptime: os.uptime(), errors: [] };
   sections.forEach((section, i) => {
     if (section.status === 'fulfilled') result[names[i]] = [].concat(section.value || []);
@@ -106,4 +150,4 @@ function createPowerManager(directory, adapter = { plans, power }) {
   }
   return { read, apply, undo };
 }
-module.exports = { scan, plans, createPowerManager };
+module.exports = { scan, plans, createPowerManager, optimizationAdapter, telemetry };
