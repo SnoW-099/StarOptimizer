@@ -1,0 +1,62 @@
+const { _electron: electron } = require('@playwright/test');
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const fs = require('node:fs/promises');
+(async () => {
+  const env = { ...process.env }; delete env.ELECTRON_RUN_AS_NODE;
+  const launch = process.argv[2] ? { executablePath: path.resolve(process.argv[2]), args: [] } : { args: [path.join(__dirname, '..')] };
+  const app = await electron.launch({ ...launch, env });
+  try {
+    const page = await app.firstWindow();
+    const errors = []; page.on('pageerror', e => errors.push(e.message));
+    await page.waitForSelector('#nova');
+    // Restore the user's visual preference when the test finishes.
+    const wasSimple = await page.locator('body').evaluate(el => el.classList.contains('simple'));
+    if (wasSimple) await page.click('#appearance');
+    await page.clock.install();
+    await page.reload();
+    await page.waitForSelector('#nova');
+    const mood = () => page.locator('#nova-space').getAttribute('data-mood');
+    await page.clock.runFor(1600);
+    assert.equal(await mood(), 'curious', 'Nova initiates her own gesture without a click');
+    await page.locator('#nova').focus(); await page.locator('#nova').press('Enter');
+    assert.equal(await mood(), 'happy');
+    assert.equal(await page.locator('.nova-pop').count(), 5);
+    const box = await page.locator('#nova').boundingBox();
+    await page.clock.runFor(2100);
+    await page.mouse.move(box.x + box.width / 2, box.y + 28);
+    assert.equal(await mood(), 'pet', 'Moving across the forehead triggers affection');
+    await page.locator('#nova').press('Enter'); assert.equal(await mood(), 'pet');
+    await page.locator('#nova').press('Enter'); assert.equal(await mood(), 'wink');
+    await page.locator('#nova').press('Enter'); assert.equal(await mood(), 'surprise');
+    assert.ok(await page.locator('.nova-pop').count() <= 5, 'Rapid interaction cannot accumulate particles');
+    await fs.mkdir('artifacts', { recursive: true });
+    await page.screenshot({ path: 'artifacts/nova-surprise.png' });
+    await page.clock.runFor(46000);
+    assert.equal(await mood(), 'sleepy', 'Nova rests after inactivity');
+    await page.locator('#nova').evaluate(el => {
+      el.blur();
+      el.getAnimations({ subtree: true }).filter(a => a.effect.getComputedTiming().iterations !== Infinity).forEach(a => a.finish());
+    });
+    await page.screenshot({ path: 'artifacts/nova-sleepy.png' });
+    await page.mouse.move(180, 180);
+    assert.equal(await mood(), 'surprise', 'Pointer movement wakes Nova');
+    await page.click('[data-view="history"]');
+    assert.equal(await page.locator('#nova-space').evaluate(el => el.classList.contains('nova-still')), true);
+    await page.clock.runFor(30000);
+    assert.equal(await page.locator('#nova-space').evaluate(el => el.getAnimations({ subtree: true }).filter(a => a.playState === 'running').length), 0);
+    await page.click('[data-view="overview"]');
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.clock.runFor(100);
+    assert.equal(await page.locator('#nova-space').evaluate(el => el.getAnimations({ subtree: true }).filter(a => a.playState === 'running').length), 0);
+    await page.locator('#nova').press('Enter');
+    assert.equal(await page.locator('#nova-space').evaluate(el => el.getAnimations({ subtree: true }).filter(a => a.playState === 'running').length), 0);
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.click('#appearance');
+    await page.clock.runFor(100);
+    assert.equal(await page.locator('#nova-space').evaluate(el => el.getAnimations({ subtree: true }).filter(a => a.playState === 'running').length), 0);
+    if (!wasSimple) await page.click('#appearance');
+    assert.deepEqual(errors, []);
+    console.log('PASS: autonomous gestures, click variation, petting, bounded particles, sleep/wake, offscreen pause, reduced motion, simple appearance.');
+  } finally { await app.close(); }
+})().catch(error => { console.error(error); process.exitCode = 1; });

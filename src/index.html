@@ -2,7 +2,7 @@
 <html lang="es"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
-<title>StarOptimizer</title><link rel="stylesheet" href="style.css"></head><body>
+<title>StarOptimizer</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="nova.css"></head><body>
 <svg class="sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
 <symbol id="i-home" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
 <symbol id="i-tune" viewBox="0 0 24 24"><path d="M4 7h8m4 0h4M4 17h3m4 0h9"/><circle cx="14" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
@@ -47,4 +47,4 @@
 <footer><span id="last-scan">Pendiente de análisis</span><span>StarOptimizer 0.2 <span class="footer-dot">·</span> Hecho con cuidado.</span></footer></main></div>
 <dialog id="review-dialog"><div class="dialog-top"><span class="eyebrow">ANTES DE APLICAR</span><button class="icon-button" id="close-review" aria-label="Cerrar revisión">×</button></div><h2>Todo claro.<br>Todo bajo tu control.</h2><p>Estos son los cambios exactos que vamos a hacer.</p><div id="review-list" class="rows"></div><div class="review-note">Guardaremos los valores originales. Si una operación falla, intentaremos restaurar los cambios iniciados; cualquier recuperación pendiente quedará en Historial.</div><p class="micro" id="review-warning"></p><div class="dialog-actions"><button class="button secondary" id="cancel-review">Volver</button><button class="button primary" id="confirm-apply">Aplicar cambios</button></div></dialog>
 <div id="operation" class="operation glass" role="status" hidden><span class="spinner"></span><div><strong id="operation-title">Aplicando ajustes</strong><p>Verificando los valores de Windows. Mantén la app abierta.</p></div></div>
-<div id="toast" role="status" aria-live="polite" hidden><span id="toast-message"></span><button id="dismiss-toast" aria-label="Cerrar aviso">×</button></div><script src="renderer.js"></script></body></html>
+<div id="toast" role="status" aria-live="polite" hidden><span id="toast-message"></span><button id="dismiss-toast" aria-label="Cerrar aviso">×</button></div><script src="nova.js"></script><script src="renderer.js"></script></body></html>

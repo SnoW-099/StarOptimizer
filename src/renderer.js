@@ -1,5 +1,6 @@
 const $ = id => document.getElementById(id);
 const api = window.star;
+const nova = window.createNova();
 let snapshot, journal = [], draft = {}, token, analysisTask, operating = false, toastTimer, liveTimer, view = 'overview';
 const GB = n => (Number(n) / 1073741824).toLocaleString('es-ES', { maximumFractionDigits: 1 });
 const active = e => ['pending', 'applied', 'recovering', 'recovery-needed'].includes(e.status);
@@ -43,6 +44,7 @@ function button(text, action) {
 function show(next) {
   if (operating || !labels[next]) return;
   view = next;
+  nova.context({ visible: view === 'overview' });
   document.querySelectorAll('.view').forEach(el => el.hidden = el.id !== view);
   document.querySelectorAll('.nav').forEach(el => {
     el.classList.toggle('active', el.dataset.view === view);
@@ -187,18 +189,20 @@ function render() {
   filterLists(); renderConfiguration();
 }
 async function performAnalysis() {
+  let completed = false;
   $('scan').disabled = true; $('scan').textContent = 'Analizando…';
-  document.body.classList.add('scanning'); $('nova-caption').textContent = 'Conociendo tu equipo…';
+  document.body.classList.add('scanning'); nova.working(true);
   $('scan-status').textContent = 'Consultando Windows. Puede tardar unos segundos.';
   clearTimeout(liveTimer);
   try {
     snapshot = await call('scan');
     for (const key of Object.keys(draft)) if (snapshot.configuration.values[key] == null || key === 'power' && !snapshot.configuration.plans.some(p => p.id === draft[key])) delete draft[key];
-    render(); await loadHistory(); return true;
+    render(); await loadHistory(); completed = snapshot.errors.length === 0; return true;
   } catch (e) { $('scan-status').textContent = 'No se pudo completar el análisis. Puedes reintentarlo.'; toast(e.message); return false; }
   finally {
     $('scan').disabled = false; $('scan').textContent = 'Volver a analizar ↻';
-    document.body.classList.remove('scanning'); $('nova-caption').textContent = 'Nova está contigo';
+    document.body.classList.remove('scanning');
+    if (!operating) { nova.working(false); nova.react(completed ? 'success' : 'error'); }
     scheduleLive();
   }
 }
@@ -208,6 +212,7 @@ function analyze() {
 }
 function setOperating(value, title = '') {
   operating = value; document.body.classList.toggle('operation-active', value);
+  nova.working(value);
   document.querySelector('main').inert = value; document.querySelector('.rail').inert = value;
   $('operation').hidden = !value; $('operation-title').textContent = title;
   clearTimeout(liveTimer); if (!value) scheduleLive();
@@ -215,12 +220,13 @@ function setOperating(value, title = '') {
 async function performMutation(title, task) {
   if (operating) return;
   setOperating(true, title);
-  let failure;
-  try { if (analysisTask) await analysisTask; const result = await task(); toast(result.restored ? 'Valores originales restaurados y verificados.' : `${result.changed} ajustes aplicados y verificados. Puedes restaurarlos desde Historial.`); }
+  let failure, restored = false;
+  try { if (analysisTask) await analysisTask; const result = await task(); restored = Boolean(result.restored); toast(result.restored ? 'Valores originales restaurados y verificados.' : `${result.changed} ajustes aplicados y verificados. Puedes restaurarlos desde Historial.`); }
   catch (e) { failure = e; }
   finally {
     draft = {}; clearProfile();
     await analyze(); await loadHistory(); setOperating(false);
+    nova.react(failure ? 'error' : restored ? 'restore' : 'success');
     if (failure) { toast(failure.message); show('history'); }
   }
 }
@@ -272,6 +278,7 @@ $('live').addEventListener('change', scheduleLive);
 $('dismiss-toast').addEventListener('click', () => $('toast').hidden = true);
 $('export').addEventListener('click', async () => { try { if (await call('export')) toast('Diagnóstico guardado. Incluye procesos, inicio e historial. Revísalo antes de compartirlo.'); } catch (e) { toast(e.message); } });
 function appearance(simple) {
+  nova.context({ simple });
   document.body.classList.toggle('simple', simple); $('appearance').setAttribute('aria-pressed', String(simple));
   $('appearance').querySelector('span').textContent = simple ? 'Sencilla' : 'Cristal';
   $('appearance').title = simple ? 'Volver a la apariencia de cristal' : 'Usar apariencia sencilla, con menos efectos';
@@ -279,25 +286,6 @@ function appearance(simple) {
 }
 $('appearance').addEventListener('click', () => appearance(!document.body.classList.contains('simple')));
 try { appearance(localStorage.getItem('star-simple') === 'true'); } catch { /* Default appearance. */ }
-const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
-let gazeFrame, pointer, greetTimer;
-document.addEventListener('pointermove', e => {
-  if (view !== 'overview' || document.hidden || reduceMotion.matches || document.body.classList.contains('simple')) return;
-  pointer = { x: e.clientX, y: e.clientY };
-  if (gazeFrame) return;
-  gazeFrame = requestAnimationFrame(() => {
-    const rect = $('nova').getBoundingClientRect();
-    $('nova').style.setProperty('--gaze-x', `${Math.max(-7, Math.min(7, (pointer.x - rect.left - rect.width / 2) / 70))}px`);
-    $('nova').style.setProperty('--gaze-y', `${Math.max(-5, Math.min(5, (pointer.y - rect.top - rect.height / 2) / 80))}px`);
-    gazeFrame = null;
-  });
-}, { passive: true });
-$('nova').addEventListener('click', () => {
-  clearTimeout(greetTimer); document.body.classList.remove('greeting');
-  requestAnimationFrame(() => document.body.classList.add('greeting'));
-  $('nova-caption').textContent = 'Un paso a la vez. Estoy contigo.';
-  greetTimer = setTimeout(() => { document.body.classList.remove('greeting'); $('nova-caption').textContent = 'Nova está contigo'; }, 2500);
-});
 document.addEventListener('visibilitychange', () => { document.body.classList.toggle('paused', document.hidden); scheduleLive(); });
 api?.onBusyClose(() => toast('Estamos verificando un cambio. Espera a que termine antes de cerrar la app.'));
 loadHistory();
