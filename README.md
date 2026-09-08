@@ -4,6 +4,8 @@ Aplicación de escritorio para Windows 10/11 x64. Versión 0.5.0: puesta a punto
 
 ## Ejecutar
 
+**[Descargar el programa para Windows](https://github.com/SnoW-099/StarOptimizer/releases/latest)**. Descarga el ZIP, extrae la carpeta y abre el ejecutable. El repositorio es privado: inicia sesión con una cuenta con acceso. La descarga del código fuente no incluye el programa compilado; usa los archivos adjuntos de la versión.
+
 Descarga o genera `dist/StarOptimizer-0.5.0-portable.exe` y ábrelo. No necesita instalarse ni pide elevación. Windows puede mostrar una advertencia de editor desconocido porque el binario no está firmado. Algunas políticas de empresa pueden impedir leer o modificar ajustes; la app informa del error.
 
 Para desarrollo, con Node.js y npm instalados:
