@@ -34,6 +34,8 @@ const os = require('node:os');
       global.starWorkflow = testState;
     }, dir);
     await page.click('#scan');
+    await page.waitForSelector('#scan-results:not([hidden])');
+    await page.click('#scan-return');
     await page.waitForFunction(() => document.querySelector('#cpu-detail').textContent === 'CPU de prueba');
     await page.click('[data-view="recommendations"]');
     await page.click('[data-profile="fluid"]');

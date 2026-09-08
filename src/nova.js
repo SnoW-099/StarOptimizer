@@ -60,8 +60,8 @@ window.createNova = function createNova() {
       button.style.setProperty('--gaze-x', `${target.x}px`);
       button.style.setProperty('--gaze-y', `${target.y}px`);
       const strength = Math.max(0, Math.hypot(target.x, target.y) - 5) / 14;
-      button.style.setProperty('--head-x', `${target.x * .47 * strength}px`);
-      button.style.setProperty('--head-y', `${target.y * .5 * strength}px`);
+      button.style.setProperty('--head-x', `${target.x * .58 * strength}px`);
+      button.style.setProperty('--head-y', `${target.y * .75 * strength - 3}px`);
       button.style.setProperty('--head-turn', `${target.x * .52 * strength}deg`);
       button.style.setProperty('--eye-depth', `${1 + target.x * .004}`);
     });
@@ -69,7 +69,7 @@ window.createNova = function createNova() {
   const idleLooks = [
     { x: -15, y: -4, duration: 930, hold: 2250 },
     { x: -10, y: 7, duration: 740, hold: 1700 },
-    { x: 12, y: -7, duration: 1010, hold: 2380 },
+    { x: 12, y: -10, duration: 1010, hold: 2380 },
     { x: 16, y: 3, duration: 820, hold: 1900 },
     { x: 5, y: 8, duration: 680, hold: 1450 },
     { x: 0, y: 0, duration: 1120, hold: 2600 }

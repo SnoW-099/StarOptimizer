@@ -1,10 +1,10 @@
 # StarOptimizer
 
-Aplicación de escritorio para Windows 10/11 x64. Versión 0.3.0: interfaz clara inspirada en el diseño de escritorio de Apple, modo oscuro opcional y una mascota con flotación orgánica y movimiento suave de ojos. Conserva diagnóstico local, perfiles, búsquedas, exportación y ajustes reversibles. Beta sin firma digital.
+Aplicación de escritorio para Windows 10/11 x64. Versión 0.4.0: experiencia de análisis con Nova y recomendaciones ordenadas por prioridad a partir de datos reales. Conserva diagnóstico local, perfiles, búsquedas, exportación y ajustes reversibles. Beta sin firma digital.
 
 ## Ejecutar
 
-Descarga o genera `dist/StarOptimizer-0.3.0-portable.exe` y ábrelo. No necesita instalarse ni pide elevación. Windows puede mostrar una advertencia de editor desconocido porque el binario no está firmado. Algunas políticas de empresa pueden impedir leer o modificar ajustes; la app informa del error.
+Descarga o genera `dist/StarOptimizer-0.4.0-portable.exe` y ábrelo. No necesita instalarse ni pide elevación. Windows puede mostrar una advertencia de editor desconocido porque el binario no está firmado. Algunas políticas de empresa pueden impedir leer o modificar ajustes; la app informa del error.
 
 Para desarrollo, con Node.js y npm instalados:
 
@@ -14,6 +14,9 @@ npm start
 ```
 
 ## Qué hace
+
+- Al pulsar Analizar, Nova piensa y lee mientras Windows reúne datos. La bombilla aparece tras recibir los resultados; el resumen distingue análisis completo, parcial y fallo. No se simula un porcentaje de avance. Puedes continuar en segundo plano.
+- Recomendados permanece bloqueado hasta recibir un análisis. Ordena lecturas pendientes, presión de almacenamiento/memoria, CPU y revisión opcional de inicio. Cada punto muestra evidencia y una acción; no supone que todas las entradas de inicio estén activadas. Los datos ausentes no se convierten en diagnósticos. La sección se desbloquea de nuevo tras analizar en cada sesión.
 
 - Consulta CPU, RAM, discos locales, GPU/controlador, hasta 30 grupos de procesos por consumo de memoria y entradas de inicio, con búsquedas.
 - Ofrece un monitor opcional de CPU/RAM cada cinco segundos. Se pausa fuera de Inicio, al ocultar la app y durante operaciones. El resto de los datos conserva la fecha del análisis completo.
@@ -41,10 +44,11 @@ npm test
 npm run test:ui
 npm run test:workflow
 npm run test:nova
+npm run test:scan
 npm run dist
 ```
 
-Las 23 pruebas unitarias cubren el motor nuevo y la compatibilidad del motor de energía anterior: recuperación, reinicio, comandos fallidos, historial corrupto, escritura fallida, valores externos, permisos, lotes parciales, caducidad y migración. Las mutaciones usan adaptadores aislados y directorios temporales.
+Las 27 pruebas unitarias cubren los motores de optimización y las prioridades del diagnóstico, incluidos datos ausentes e inválidos. Las mutaciones usan adaptadores aislados y directorios temporales. `test:scan` verifica bloqueo inicial, error, fases visuales, resumen parcial y continuación en segundo plano con un adaptador de lectura aislado.
 
 `test:ui` ejecuta un diagnóstico real y lee las opciones nativas, prueba navegación, revisión/cancelación, búsqueda, apariencia, movimiento reducido y una ventana compacta. No aplica ajustes al anfitrión. `test:workflow` prueba desde los botones el ciclo revisión → aplicación → restauración y la recuperación automática de un lote fallido, con el motor real y un adaptador simulado dentro del proceso de prueba. La app distribuida no expone un modo de prueba. Ambas pruebas admiten un ejecutable empaquetado: `node test/ui.cjs dist/win-unpacked/StarOptimizer.exe` y `node test/workflow.cjs dist/win-unpacked/StarOptimizer.exe`.
 

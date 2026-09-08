@@ -9,12 +9,17 @@ const fs = require('node:fs/promises');
   try {
     const page = await app.firstWindow(); const errors = []; page.on('pageerror', error => errors.push(error.message));
     await page.waitForSelector('#scan'); await fs.mkdir('artifacts', { recursive: true });
+    assert.equal(await page.locator('[data-view="recommended"]').isDisabled(), true);
     await page.screenshot({ path: 'artifacts/dashboard-before.png', animations: 'disabled' });
     await page.click('#scan');
     await page.waitForFunction(() => document.querySelector('#last-scan').textContent.includes('Última lectura'), { timeout: 60000 });
     assert.ok((await page.textContent('#memory-value')).includes('GB'));
+    await page.waitForSelector('#scan-results:not([hidden])');
+    await page.screenshot({ path: 'artifacts/scan-summary.png', animations: 'disabled' });
+    await page.click('#scan-return');
+    assert.equal(await page.locator('[data-view="recommended"]').isEnabled(), true);
     await page.screenshot({ path: 'artifacts/dashboard.png', animations: 'disabled' });
-    for (const view of ['recommendations', 'startup', 'processes', 'history']) {
+    for (const view of ['recommendations', 'recommended', 'startup', 'processes', 'history']) {
       await page.click(`[data-view="${view}"]`);
       assert.equal(await page.locator(`#${view}`).isVisible(), true);
     }

@@ -19,6 +19,7 @@ const visual = {
   comboAnimation: ['Listas sin transiciones', 'Desactiva el efecto de apertura de las listas desplegables compatibles.']
 };
 const labels = {
+  recommended: ['Recomendados para tu PC.', 'Una lista de prioridades basada en las lecturas disponibles.', 'EL SIGUIENTE PASO.'],
   overview: ['Todo en su sitio.', 'El estado de tu equipo y tus ajustes, en un solo lugar.', 'UN POCO MÁS SIMPLE.'],
   recommendations: ['Ajustes a tu medida.', 'Elige un perfil o prepara tus propios cambios.', 'LA FLUIDEZ EMPIEZA AQUÍ.'],
   startup: ['Un buen comienzo.', 'Menos aplicaciones al iniciar sesión, más espacio para lo que necesitas.', 'ELIGE QUIÉN TE ACOMPAÑA.'],
@@ -75,6 +76,7 @@ function moveNova(next, from = $('nova').getBoundingClientRect()) {
 }
 function show(next) {
   if (operating || !labels[next]) return;
+  if (next === 'recommended' && !snapshot) return;
   const previousNovaPosition = $('nova').getBoundingClientRect();
   view = next;
   window.scrollTo({ top: 0, behavior: 'instant' });
@@ -223,8 +225,33 @@ function render() {
   $('recommendation-summary').textContent = signals ? `${signals} ${signals === 1 ? 'señal para revisar' : 'señales para revisar'} · Tú decides el siguiente paso.` : 'Tu diagnóstico y los ajustes compatibles.';
   filterLists(); renderConfiguration();
 }
-async function performAnalysis() {
+const scanExperience = window.createScanExperience({
+  takeNova(slot) {
+    novaFlight?.cancel(); novaFlight = null;
+    novaSpace.classList.remove('nova-travelling'); slot.append(novaSpace);
+  },
+  returnNova() { (view === 'overview' ? novaHome : novaDock).append(novaSpace); },
+  navigate: show
+});
+function renderPriorities() {
+  const items = window.starPriorities(snapshot);
+  const nav = document.querySelector('[data-view="recommended"]');
+  nav.disabled = !snapshot; nav.title = snapshot ? 'Ver las prioridades del último análisis' : 'Analiza tu equipo primero';
+  $('priority-date').textContent = `Lectura del ${new Date(snapshot.at).toLocaleString('es-ES')}${snapshot.errors.length ? ' · datos parciales' : ''}. Vuelve a analizar si ha cambiado la carga de tu equipo.`;
+  const list = $('priority-list'); list.replaceChildren();
+  for (const item of items) {
+    const li = node('li', undefined, 'priority-item');
+    const body = node('div');
+    body.append(node('span', ['Lecturas pendientes', 'Prioridad alta', 'Comprobar carga', 'Revisión opcional'][item.priority], 'tag'), node('h3', item.title), node('p', item.evidence));
+    li.append(body, button(item.action, () => item.view === 'scan' ? analyze(true) : show(item.view))); list.append(li);
+  }
+  if (!items.length) list.append(node('li', 'Sin acciones prioritarias según los datos disponibles. No hace falta modificar ajustes por modificar.', 'empty'));
+  return items;
+}
+async function performAnalysis(interactive = false) {
   let completed = false;
+  $('toast').hidden = true;
+  if (interactive) scanExperience.open();
   $('scan').disabled = true; $('scan').textContent = 'Analizando…';
   document.body.classList.add('scanning'); nova.working(true);
   $('scan-status').textContent = 'Consultando Windows. Puede tardar unos segundos.';
@@ -232,8 +259,10 @@ async function performAnalysis() {
   try {
     snapshot = await call('scan');
     for (const key of Object.keys(draft)) if (snapshot.configuration.values[key] == null || key === 'power' && !snapshot.configuration.plans.some(p => p.id === draft[key])) delete draft[key];
-    render(); await loadHistory(); completed = snapshot.errors.length === 0; return true;
-  } catch (e) { $('scan-status').textContent = 'No se pudo completar el análisis. Puedes reintentarlo.'; toast(e.message); return false; }
+    render(); const priorities = renderPriorities(); await loadHistory(); completed = snapshot.errors.length === 0;
+    if (interactive) scanExperience.complete(snapshot, priorities);
+    return true;
+  } catch (e) { $('scan-status').textContent = 'No se pudo completar el análisis. Puedes reintentarlo.'; if (interactive) scanExperience.fail(e.message); toast(e.message); return false; }
   finally {
     $('scan').disabled = false; $('scan').textContent = 'Volver a analizar ↻';
     document.body.classList.remove('scanning');
@@ -241,8 +270,8 @@ async function performAnalysis() {
     scheduleLive();
   }
 }
-function analyze() {
-  if (!analysisTask) analysisTask = performAnalysis().finally(() => analysisTask = null);
+function analyze(interactive = false) {
+  if (!analysisTask) analysisTask = performAnalysis(interactive === true).finally(() => analysisTask = null);
   return analysisTask;
 }
 function setOperating(value, title = '') {
@@ -297,7 +326,7 @@ document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click'
 document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => show(b.dataset.go)));
 document.querySelectorAll('[data-profile]').forEach(b => b.addEventListener('click', () => prepareProfile(b.dataset.profile)));
 document.querySelectorAll('[data-settings]').forEach(b => b.addEventListener('click', async () => { try { await call('settings', b.dataset.settings); } catch (e) { toast(e.message); } }));
-for (const id of ['scan', 'refresh-analysis', 'refresh-processes']) $(id).addEventListener('click', analyze);
+for (const id of ['scan', 'refresh-analysis', 'refresh-processes']) $(id).addEventListener('click', () => analyze(true));
 $('power-select').addEventListener('change', () => { draft.power = $('power-select').value; clearProfile(); selectionCount(); });
 $('reset-selection').addEventListener('click', () => { draft = {}; clearProfile(); renderConfiguration(); });
 $('review').addEventListener('click', review);
