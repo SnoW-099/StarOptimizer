@@ -47,3 +47,13 @@
 @media(max-width:1000px) { .priority-item { flex-wrap: wrap; } .priority-item>div { min-width: 65%; } #scan-dialog { padding: 25px; } .scan-scene { height: 245px; } }
 @media(prefers-reduced-motion:reduce) { #scan-dialog * { animation: none !important; transition: none !important; } }
 .simple #scan-dialog * { animation: none !important; transition: none !important; }
+.setup-steps { display: grid; grid-template-columns: repeat(3,1fr); gap: 15px; margin: 25px 0; }
+.setup-steps article { border: 1px solid var(--line); border-radius: 16px; padding: 20px; background: var(--surface-soft); }
+.setup-steps article>span { color: var(--accent); font-size: 20px; font-weight: 600; }
+.setup-steps p { font-size: 12px; color: var(--muted); line-height: 1.8; min-height: 85px; }
+#measurement-status { font-size: 12px; line-height: 1.8; color: var(--accent); }
+#measurement-results { margin: 24px 0; font-size: 12px; line-height: 1.8; }
+#measurement-results table { width: 100%; border-collapse: collapse; }
+#measurement-results th,#measurement-results td { text-align: left; padding: 12px; border-bottom: 1px solid var(--line); }
+#tuneup { padding-bottom: 140px; }
+@media(max-width:1120px) { .setup-steps { grid-template-columns: repeat(2,1fr); } }

@@ -1,10 +1,10 @@
 # StarOptimizer
 
-Aplicación de escritorio para Windows 10/11 x64. Versión 0.4.0: experiencia de análisis con Nova y recomendaciones ordenadas por prioridad a partir de datos reales. Conserva diagnóstico local, perfiles, búsquedas, exportación y ajustes reversibles. Beta sin firma digital.
+Aplicación de escritorio para Windows 10/11 x64. Versión 0.5.0: puesta a punto guiada, mediciones antes/después persistentes, estado de discos comunicado por Windows y recomendaciones por prioridad. Conserva diagnóstico local, perfiles, búsquedas, exportación y ajustes reversibles. Beta sin firma digital. Consulta `GUIA-PUESTA-A-PUNTO.md` para utilizarla en otro equipo.
 
 ## Ejecutar
 
-Descarga o genera `dist/StarOptimizer-0.4.0-portable.exe` y ábrelo. No necesita instalarse ni pide elevación. Windows puede mostrar una advertencia de editor desconocido porque el binario no está firmado. Algunas políticas de empresa pueden impedir leer o modificar ajustes; la app informa del error.
+Descarga o genera `dist/StarOptimizer-0.5.0-portable.exe` y ábrelo. No necesita instalarse ni pide elevación. Windows puede mostrar una advertencia de editor desconocido porque el binario no está firmado. Algunas políticas de empresa pueden impedir leer o modificar ajustes; la app informa del error.
 
 Para desarrollo, con Node.js y npm instalados:
 
@@ -14,6 +14,11 @@ npm start
 ```
 
 ## Qué hace
+
+- Puesta a punto guía análisis, medición inicial, inicio, perfiles, controles de Windows y comparación final. Las mediciones toman doce muestras y guardan media/pico de CPU y RAM media en `%APPDATA%/StarOptimizer/measurements.json`, conservando las lecturas anteriores. No mide FPS ni declara ganancias de velocidad. El backend impide aplicar cambios durante la medición.
+- Consulta `Get-PhysicalDisk` para mostrar nombre, tipo y estados de salud/operativo, sin números de serie. Si falla o no hay datos, indica no disponible. Un aviso reportado se prioriza antes de ajustes de rendimiento. Esto no sustituye pruebas de salud ni sensores de temperatura.
+
+Referencia técnica: [Get-PhysicalDisk, Microsoft Learn](https://learn.microsoft.com/en-us/powershell/module/storage/get-physicaldisk). El estado procede del proveedor de almacenamiento de Windows y no equivale a una prueba exhaustiva del dispositivo.
 
 - Al pulsar Analizar, Nova piensa y lee mientras Windows reúne datos. La bombilla aparece tras recibir los resultados; el resumen distingue análisis completo, parcial y fallo. No se simula un porcentaje de avance. Puedes continuar en segundo plano.
 - Recomendados permanece bloqueado hasta recibir un análisis. Ordena lecturas pendientes, presión de almacenamiento/memoria, CPU y revisión opcional de inicio. Cada punto muestra evidencia y una acción; no supone que todas las entradas de inicio estén activadas. Los datos ausentes no se convierten en diagnósticos. La sección se desbloquea de nuevo tras analizar en cada sesión.
@@ -45,10 +50,11 @@ npm run test:ui
 npm run test:workflow
 npm run test:nova
 npm run test:scan
+npm run test:measure
 npm run dist
 ```
 
-Las 27 pruebas unitarias cubren los motores de optimización y las prioridades del diagnóstico, incluidos datos ausentes e inválidos. Las mutaciones usan adaptadores aislados y directorios temporales. `test:scan` verifica bloqueo inicial, error, fases visuales, resumen parcial y continuación en segundo plano con un adaptador de lectura aislado.
+Las 32 pruebas unitarias cubren optimización, prioridades y persistencia de mediciones, incluidos datos ausentes, muestreo fallido e historial corrupto. Las mutaciones usan adaptadores aislados y directorios temporales. `test:scan` verifica bloqueo inicial, error, fases visuales y resumen parcial; `test:measure` comprueba mediciones reales, exclusión de operaciones y recuperación de la lectura inicial tras reiniciar con un perfil de datos aislado.
 
 `test:ui` ejecuta un diagnóstico real y lee las opciones nativas, prueba navegación, revisión/cancelación, búsqueda, apariencia, movimiento reducido y una ventana compacta. No aplica ajustes al anfitrión. `test:workflow` prueba desde los botones el ciclo revisión → aplicación → restauración y la recuperación automática de un lote fallido, con el motor real y un adaptador simulado dentro del proceso de prueba. La app distribuida no expone un modo de prueba. Ambas pruebas admiten un ejecutable empaquetado: `node test/ui.cjs dist/win-unpacked/StarOptimizer.exe` y `node test/workflow.cjs dist/win-unpacked/StarOptimizer.exe`.
 

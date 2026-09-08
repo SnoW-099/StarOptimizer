@@ -4,7 +4,10 @@
     if (!s) return [];
     const list = [], errors = s.errors || [];
     const add = (priority, title, evidence, action, view) => list.push({ priority, title, evidence, action, view });
-    const names = { cpu: 'CPU', memory: 'memoria', disks: 'almacenamiento', processes: 'procesos', startup: 'inicio', plans: 'energía', gpu: 'GPU', configuration: 'ajustes de Windows' };
+    const names = { cpu: 'CPU', memory: 'memoria', disks: 'almacenamiento', physicalDisks: 'estado físico de discos', processes: 'procesos', startup: 'inicio', plans: 'energía', gpu: 'GPU', configuration: 'ajustes de Windows' };
+    if (!errors.includes('physicalDisks')) for (const disk of s.physicalDisks || []) {
+      if (['Warning','Unhealthy'].includes(disk.HealthStatus)) add(0, `Proteger los datos de ${disk.Name}`, `Windows reporta ${disk.HealthStatus}. Prioriza una copia de tus archivos importantes y revisar la unidad antes de buscar más rendimiento.`, 'Ver estado de discos', 'tuneup');
+    }
     if (errors.length) add(0, 'Completar las lecturas pendientes', `Windows no pudo consultar: ${errors.map(key => names[key] || key).join(', ')}. Las recomendaciones solo cubren los datos disponibles.`, 'Volver a analizar', 'scan');
     if (!errors.includes('disks')) for (const d of s.disks || []) {
       if (Number.isFinite(d.Size) && d.Size > 0 && Number.isFinite(d.FreeSpace) && d.FreeSpace >= 0 && d.FreeSpace / d.Size < .15)

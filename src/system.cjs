@@ -81,9 +81,10 @@ async function scan() {
     ps('Get-Process | Group-Object ProcessName | ForEach-Object { [PSCustomObject]@{ ProcessName = $_.Name; Count = $_.Count; WorkingSet64 = ($_.Group | Measure-Object WorkingSet64 -Sum).Sum } } | Sort-Object WorkingSet64 -Descending | Select-Object -First 30 | ConvertTo-Json -Compress'),
     ps('Get-CimInstance Win32_StartupCommand | Select-Object Name,Location | ConvertTo-Json -Compress'),
     plans(),
-    ps('Get-CimInstance Win32_VideoController | Select-Object Name,DriverVersion | ConvertTo-Json -Compress')
+    ps('Get-CimInstance Win32_VideoController | Select-Object Name,DriverVersion | ConvertTo-Json -Compress'),
+    ps('Get-PhysicalDisk | ForEach-Object { [PSCustomObject]@{ Name = $_.FriendlyName; MediaType = [string]$_.MediaType; HealthStatus = [string]$_.HealthStatus; OperationalStatus = ($_.OperationalStatus -join ", "); Size = $_.Size } } | ConvertTo-Json -Compress')
   ]);
-  const names = ['cpu', 'disks', 'processes', 'startup', 'plans', 'gpu'];
+  const names = ['cpu', 'disks', 'processes', 'startup', 'plans', 'gpu', 'physicalDisks'];
   const result = { at: new Date().toISOString(), platform: `Windows ${os.release()}`, memory: { total: os.totalmem(), free: os.freemem() }, uptime: os.uptime(), errors: [] };
   sections.forEach((section, i) => {
     if (section.status === 'fulfilled') result[names[i]] = [].concat(section.value || []);

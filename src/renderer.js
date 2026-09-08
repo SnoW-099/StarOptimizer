@@ -19,6 +19,7 @@ const visual = {
   comboAnimation: ['Listas sin transiciones', 'Desactiva el efecto de apertura de las listas desplegables compatibles.']
 };
 const labels = {
+  tuneup: ['Puesta a punto.', 'Un recorrido guiado para ajustar y comprobar el resultado.', 'PREPARAR TU PC.'],
   recommended: ['Recomendados para tu PC.', 'Una lista de prioridades basada en las lecturas disponibles.', 'EL SIGUIENTE PASO.'],
   overview: ['Todo en su sitio.', 'El estado de tu equipo y tus ajustes, en un solo lugar.', 'UN POCO MÁS SIMPLE.'],
   recommendations: ['Ajustes a tu medida.', 'Elige un perfil o prepara tus propios cambios.', 'LA FLUIDEZ EMPIEZA AQUÍ.'],
@@ -259,7 +260,7 @@ async function performAnalysis(interactive = false) {
   try {
     snapshot = await call('scan');
     for (const key of Object.keys(draft)) if (snapshot.configuration.values[key] == null || key === 'power' && !snapshot.configuration.plans.some(p => p.id === draft[key])) delete draft[key];
-    render(); const priorities = renderPriorities(); await loadHistory(); completed = snapshot.errors.length === 0;
+    render(); tuneup.update(snapshot); const priorities = renderPriorities(); await loadHistory(); completed = snapshot.errors.length === 0;
     if (interactive) scanExperience.complete(snapshot, priorities);
     return true;
   } catch (e) { $('scan-status').textContent = 'No se pudo completar el análisis. Puedes reintentarlo.'; if (interactive) scanExperience.fail(e.message); toast(e.message); return false; }
@@ -362,3 +363,7 @@ try { theme(localStorage.getItem('star-dark') === 'true'); } catch { /* Default 
 document.addEventListener('visibilitychange', () => { document.body.classList.toggle('paused', document.hidden); scheduleLive(); });
 api?.onBusyClose(() => toast('Estamos verificando un cambio. Espera a que termine antes de cerrar la app.'));
 loadHistory();
+const tuneup = window.createTuneup({ call, analyze, show, hasSnapshot: () => Boolean(snapshot),
+  begin() { clearTimeout(liveTimer); document.querySelectorAll('main>*, .rail').forEach(el => { if(el.id !== 'tuneup') el.inert = true; }); },
+  end() { document.querySelectorAll('main>*, .rail').forEach(el => el.inert = false); scheduleLive(); }
+});

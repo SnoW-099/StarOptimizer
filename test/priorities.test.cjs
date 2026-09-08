@@ -18,3 +18,7 @@ test('startup entries only warrant optional review, never assumed enabled or har
   const s = normal(); s.startup = [{ Name: 'Security' }];
   const [item] = priorities(s); assert.equal(item.priority, 3); assert.match(item.evidence, /deshabilitadas/);
 });
+test('physical disk warnings take priority, unknown status is never a failure diagnosis', () => {
+  const s=normal(); s.physicalDisks=[{Name:'SSD',HealthStatus:'Warning'},{Name:'Unknown disk',HealthStatus:'Unknown'}];
+  const items=priorities(s); assert.equal(items.length,1); assert.equal(items[0].priority,0); assert.match(items[0].title,/Proteger/);
+});
