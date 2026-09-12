@@ -18,9 +18,13 @@
       add(1, 'Revisar las aplicaciones que ocupan memoria', `${Math.round((m.total - m.free) / m.total * 100)} % de RAM ocupada en esta lectura. Guarda tu trabajo antes de cerrar aplicaciones que no necesites.`, 'Ver recursos', 'processes');
     const cpu = s.cpu?.[0]?.LoadPercentage;
     if (!errors.includes('cpu') && Number.isFinite(cpu) && cpu > 80 && cpu <= 100)
-      add(2, 'Comprobar si la carga de CPU se mantiene', `${cpu} % en una muestra. Un pico puede ser normal: repite la lectura cuando finalicen las tareas actuales.`, 'Ver recursos', 'processes');
+      add(2, 'Comprobar si la carga de CPU se mantiene', `${cpu} % de carga${s.cpu[0].Samples > 1 ? ` media de ${s.cpu[0].Samples} muestras` : ' en una muestra'}. Revisa la tarea que está usando el procesador.`, 'Ver recursos', 'processes');
     if (!errors.includes('startup') && s.startup?.length)
       add(3, 'Revisar las aplicaciones de inicio', `${s.startup.length} entradas reportadas. El inventario puede incluir entradas deshabilitadas: confirma su estado en Windows y conserva seguridad y controladores.`, 'Revisar inicio', 'startup');
+    if (!errors.includes('configuration')) {
+      const changes = Object.fromEntries(['animations','menuAnimation','comboAnimation'].filter(key => s.configuration?.values?.[key] === true).map(key => [key,false]));
+      if (Object.keys(changes).length) list.push({ priority: 3, title: 'Opcional: una interfaz con menos transiciones', evidence: 'Windows tiene animaciones activadas. Puedes reducirlas para que los controles compatibles se muestren directamente. No libera RAM ni garantiza más FPS.', action: 'Revisar aplicación automática', view: 'recommendations', changes });
+    }
     return list.sort((a, b) => a.priority - b.priority);
   }
   if (typeof module !== 'undefined') module.exports = priorities;

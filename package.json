@@ -1,6 +1,6 @@
 {
   "name": "staroptimizer",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Diagnóstico local y ajustes reversibles para Windows",
   "main": "src/main.cjs",
   "scripts": {
@@ -11,6 +11,7 @@
     "test:nova": "node test/nova.cjs",
     "test:scan": "node test/scan-flow.cjs",
     "test:measure": "node test/measure-ui.cjs",
+    "test:live": "node test/live-recommendations.cjs",
     "dist": "electron-builder --win portable --x64"
   },
   "keywords": [],

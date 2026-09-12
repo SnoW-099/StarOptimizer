@@ -1,6 +1,8 @@
-# StarOptimizer 0.5 · Para llevar a otro PC
+# StarOptimizer 0.6 · Para llevar a otro PC
 
-Lleva `StarOptimizer-0.5.0-portable.exe`. No requiere instalación ni elevación. El código no necesita viajar con el ejecutable. El historial de ajustes y las mediciones se guardan en el perfil de Windows de ese PC, no junto al ejecutable.
+Lleva `StarOptimizer-0.6.0-portable.exe`. No requiere instalación ni elevación. El código no necesita viajar con el ejecutable. El historial de ajustes y las mediciones se guardan en el perfil de Windows de ese PC, no junto al ejecutable.
+
+En Recomendados, deja activado el directo para recalcular CPU/RAM periódicamente y renovar el inventario cada minuto. Los ajustes compatibles ofrecen «Revisar aplicación automática»: lee los valores y confirma para ejecutar el lote. Las demás acciones indican qué revisar manualmente.
 
 ## En casa de tu amigo
 

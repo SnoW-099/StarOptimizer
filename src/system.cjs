@@ -75,8 +75,14 @@ async function telemetry() {
   return { at: new Date().toISOString(), cpu: cpu[0].LoadPercentage, memory: { total: os.totalmem(), free: os.freemem() } };
 }
 async function scan() {
+  const sampledCpu = async () => {
+    const readings = [];
+    for (let i=0;i<8;i++) readings.push((await cpuSample())[0]);
+    const values = readings.map(r=>r.LoadPercentage).filter(Number.isFinite);
+    return [{ Name: readings[0]?.Name, LoadPercentage: values.length ? Math.round(values.reduce((a,b)=>a+b,0)/values.length) : null, Samples: values.length, Peak: values.length ? Math.max(...values) : null }];
+  };
   const sections = await Promise.allSettled([
-    cpuSample(),
+    sampledCpu(),
     ps('Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | Select-Object DeviceID,Size,FreeSpace | ConvertTo-Json -Compress'),
     ps('Get-Process | Group-Object ProcessName | ForEach-Object { [PSCustomObject]@{ ProcessName = $_.Name; Count = $_.Count; WorkingSet64 = ($_.Group | Measure-Object WorkingSet64 -Sum).Sum } } | Sort-Object WorkingSet64 -Descending | Select-Object -First 30 | ConvertTo-Json -Compress'),
     ps('Get-CimInstance Win32_StartupCommand | Select-Object Name,Location | ConvertTo-Json -Compress'),

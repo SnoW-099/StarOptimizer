@@ -238,13 +238,21 @@ function renderPriorities() {
   const items = window.starPriorities(snapshot);
   const nav = document.querySelector('[data-view="recommended"]');
   nav.disabled = !snapshot; nav.title = snapshot ? 'Ver las prioridades del último análisis' : 'Analiza tu equipo primero';
-  $('priority-date').textContent = `Lectura del ${new Date(snapshot.at).toLocaleString('es-ES')}${snapshot.errors.length ? ' · datos parciales' : ''}. Vuelve a analizar si ha cambiado la carga de tu equipo.`;
+  $('priority-date').textContent = `Inventario: ${new Date(snapshot.at).toLocaleTimeString('es-ES')}${snapshot.errors.length ? ' · datos parciales' : ''}. CPU/RAM: ${new Date(snapshot.liveAt || snapshot.at).toLocaleTimeString('es-ES')}.`;
   const list = $('priority-list'); list.replaceChildren();
   for (const item of items) {
     const li = node('li', undefined, 'priority-item');
     const body = node('div');
     body.append(node('span', ['Lecturas pendientes', 'Prioridad alta', 'Comprobar carga', 'Revisión opcional'][item.priority], 'tag'), node('h3', item.title), node('p', item.evidence));
-    li.append(body, button(item.action, () => item.view === 'scan' ? analyze(true) : show(item.view))); list.append(li);
+    if (item.changes) {
+      const eligible = Object.fromEntries(Object.entries(item.changes).filter(([key]) => !isLocked(key)));
+      const apply = button(Object.keys(eligible).length ? item.action : 'Cambio ya registrado · ver historial', async () => {
+        if (!Object.keys(eligible).length) return show('history');
+        draft = eligible; clearProfile(); renderConfiguration(); await review();
+      });
+      li.append(body, apply);
+    } else li.append(body, button(item.action, () => item.view === 'scan' ? analyze(true) : show(item.view)));
+    list.append(li);
   }
   if (!items.length) list.append(node('li', 'Sin acciones prioritarias según los datos disponibles. No hace falta modificar ajustes por modificar.', 'empty'));
   return items;
@@ -259,6 +267,7 @@ async function performAnalysis(interactive = false) {
   clearTimeout(liveTimer);
   try {
     snapshot = await call('scan');
+    rollingCpu.length = 0;
     for (const key of Object.keys(draft)) if (snapshot.configuration.values[key] == null || key === 'power' && !snapshot.configuration.plans.some(p => p.id === draft[key])) delete draft[key];
     render(); tuneup.update(snapshot); const priorities = renderPriorities(); await loadHistory(); completed = snapshot.errors.length === 0;
     if (interactive) scanExperience.complete(snapshot, priorities);
@@ -275,6 +284,37 @@ function analyze(interactive = false) {
   if (!analysisTask) analysisTask = performAnalysis(interactive === true).finally(() => analysisTask = null);
   return analysisTask;
 }
+let recommendationTimer, recommendationReading = false, measuringUI = false;
+const rollingCpu = [];
+const recommendationControl = document.createElement('label');
+recommendationControl.className = 'live-control';
+recommendationControl.innerHTML = '<input type="checkbox" id="recommendation-live" checked> Actualizar CPU/RAM cada 5 s · inventario cada minuto';
+$('priority-date').after(recommendationControl);
+const recommendationStatus = node('p', '', 'micro'); recommendationStatus.id = 'recommendation-live-status'; recommendationControl.after(recommendationStatus);
+function scheduleRecommendations() {
+  clearTimeout(recommendationTimer);
+  if (!snapshot || view !== 'recommended' || document.hidden || operating || measuringUI || !$('recommendation-live').checked) return;
+  recommendationTimer = setTimeout(async () => {
+    if (recommendationReading || analysisTask || operating || measuringUI || $('review-dialog').open || $('scan-dialog').open) { scheduleRecommendations(); return; }
+    recommendationReading = true;
+    try {
+      if (Date.now() - Date.parse(snapshot.at) >= 60000) { if (!await analyze()) throw Error('El inventario no se pudo renovar.'); }
+      else {
+        const data = await call('telemetry');
+        if (view !== 'recommended' || document.hidden || operating || measuringUI || !$('recommendation-live').checked || $('review-dialog').open) return;
+        if (!Number.isFinite(data.cpu) || data.cpu < 0 || data.cpu > 100 || !Number.isFinite(data.memory?.total) || data.memory.total <= 0 || !Number.isFinite(data.memory.free) || data.memory.free < 0 || data.memory.free > data.memory.total) throw Error('Lectura de CPU/RAM no disponible. Se conserva la última lectura válida.');
+        rollingCpu.push(data.cpu); if (rollingCpu.length > 6) rollingCpu.shift();
+        if (rollingCpu.length >= 3) snapshot.cpu = [{ ...snapshot.cpu[0], LoadPercentage: Math.round(rollingCpu.reduce((a,b)=>a+b,0)/rollingCpu.length), Samples: rollingCpu.length }];
+        snapshot.memory = data.memory; snapshot.liveAt = data.at;
+        snapshot.errors = snapshot.errors.filter(key => key !== 'memory' && !(key === 'cpu' && rollingCpu.length >= 3));
+        renderTelemetry(snapshot.cpu[0]?.LoadPercentage ?? null, snapshot.memory); renderPriorities();
+      }
+      recommendationStatus.textContent = 'Lecturas actualizadas. Las recomendaciones se recalculan; los cambios requieren tu confirmación.';
+    } catch(e) { recommendationStatus.textContent = `No se pudo actualizar: ${e.message} Los datos anteriores conservan su fecha.`; }
+    finally { recommendationReading = false; scheduleRecommendations(); }
+  }, 5000);
+}
+$('recommendation-live').addEventListener('change', () => { recommendationStatus.textContent = $('recommendation-live').checked ? 'Actualización activada.' : 'Actualización en pausa.'; scheduleRecommendations(); });
 function setOperating(value, title = '') {
   operating = value; document.body.classList.toggle('operation-active', value);
   nova.working(value);
@@ -310,6 +350,7 @@ async function review() {
   finally { selectionCount(); }
 }
 function scheduleLive() {
+  scheduleRecommendations();
   clearTimeout(liveTimer);
   if (!$('live').checked || document.hidden || view !== 'overview' || operating) { $('live-status').textContent = $('live').checked ? 'en pausa' : 'cada 5 s'; return; }
   $('live-status').textContent = 'CPU y RAM · cada 5 s';
@@ -364,6 +405,6 @@ document.addEventListener('visibilitychange', () => { document.body.classList.to
 api?.onBusyClose(() => toast('Estamos verificando un cambio. Espera a que termine antes de cerrar la app.'));
 loadHistory();
 const tuneup = window.createTuneup({ call, analyze, show, hasSnapshot: () => Boolean(snapshot),
-  begin() { clearTimeout(liveTimer); document.querySelectorAll('main>*, .rail').forEach(el => { if(el.id !== 'tuneup') el.inert = true; }); },
-  end() { document.querySelectorAll('main>*, .rail').forEach(el => el.inert = false); scheduleLive(); }
+  begin() { measuringUI = true; clearTimeout(liveTimer); clearTimeout(recommendationTimer); document.querySelectorAll('main>*, .rail').forEach(el => { if(el.id !== 'tuneup') el.inert = true; }); },
+  end() { measuringUI = false; document.querySelectorAll('main>*, .rail').forEach(el => el.inert = false); scheduleLive(); }
 });
