@@ -12,10 +12,13 @@ const assert = require('node:assert/strict'); const path = require('node:path');
    const s=()=>({at:new Date().toISOString(),platform:'Test',cpu:[{Name:'CPU',LoadPercentage:10,Samples:8}],memory:{total:100,free:global.liveFixture.free},disks:[],startup:[],processes:[],gpu:[],errors:[],uptime:0,configuration:{plans:[],values:{animations:global.liveFixture.enabled}},onBattery:false});
    for(const [name,fn] of Object.entries({scan:()=>s(),history:()=>[],telemetry:()=>{global.liveFixture.reads++;return {at:new Date().toISOString(),cpu:10,memory:{total:100,free:global.liveFixture.free}};},preview:()=>{global.liveFixture.previews++;return {token:'fixture',changes:[{key:'animations',label:'Animaciones',beforeLabel:'Activadas',afterLabel:'Desactivadas'}]};}})) {ipcMain.removeHandler(name);ipcMain.handle(name,async()=>({ok:true,data:await fn()}));}
   });
-  await page.evaluate(()=>analyze()); await page.click('[data-view="recommended"]');
+  await page.evaluate(()=>analyze()); await page.bringToFront(); await page.click('[data-view="recommended"]');
   assert.match(await page.textContent('#priority-list'),/memoria/);
   await app.evaluate(()=>{global.liveFixture.free=70;});
-  await page.waitForFunction(()=>!document.querySelector('#priority-list').textContent.includes('aplicaciones que ocupan memoria'),{timeout:12000});
+  await page.waitForFunction(()=>!document.querySelector('#priority-list').textContent.includes('aplicaciones que ocupan memoria'),null,{timeout:15000}).catch(async error => {
+    console.error(await page.evaluate(()=>({hidden:document.hidden,status:document.querySelector('#recommendation-live-status').textContent})),errors);
+    throw error;
+  });
   await page.getByRole('button',{name:'Revisar aplicación automática',exact:true}).click();
   await page.waitForSelector('#review-dialog[open]');
   assert.equal(await app.evaluate(()=>global.liveFixture.previews),1);
@@ -25,9 +28,15 @@ const assert = require('node:assert/strict'); const path = require('node:path');
   await page.click('#cancel-review');
   await page.uncheck('#recommendation-live'); await page.waitForTimeout(5500);
   assert.equal(await app.evaluate(()=>global.liveFixture.reads),reads,'user can pause');
+  await page.click('#review-recommended');
+  await page.waitForSelector('#review-dialog[open]');
+  assert.equal(await app.evaluate(()=>global.liveFixture.previews),2,'batch opens the same explicit preview');
+  assert.equal(await app.evaluate(()=>global.liveFixture.enabled),true,'batch review does not apply');
+  await page.click('#cancel-review');
   await app.evaluate(()=>{global.liveFixture.enabled=false;});
   await page.evaluate(()=>analyze());
   assert.equal(await page.getByRole('button',{name:'Revisar aplicación automática',exact:true}).count(),0,'re-scan removes already applied action');
+  assert.equal(await page.locator('#review-recommended').count(),0,'no batch when nothing is available');
   assert.deepEqual(errors,[]);
   console.log('PASS: live recommendation resolves, explicit preview, pause during approval, user opt-out and refreshed applied state; fixture only.');
  } finally {await app.close();}

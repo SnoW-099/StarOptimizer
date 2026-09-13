@@ -1,6 +1,6 @@
 {
   "name": "staroptimizer",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Diagnóstico local y ajustes reversibles para Windows",
   "main": "src/main.cjs",
   "scripts": {

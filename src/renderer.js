@@ -240,6 +240,15 @@ function renderPriorities() {
   nav.disabled = !snapshot; nav.title = snapshot ? 'Ver las prioridades del último análisis' : 'Analiza tu equipo primero';
   $('priority-date').textContent = `Inventario: ${new Date(snapshot.at).toLocaleTimeString('es-ES')}${snapshot.errors.length ? ' · datos parciales' : ''}. CPU/RAM: ${new Date(snapshot.liveAt || snapshot.at).toLocaleTimeString('es-ES')}.`;
   const list = $('priority-list'); list.replaceChildren();
+  $('review-recommended')?.remove();
+  const automatic = Object.assign({}, ...items.filter(item => item.changes).map(item => item.changes));
+  const available = Object.fromEntries(Object.entries(automatic).filter(([key]) => !isLocked(key)));
+  if (Object.keys(available).length) {
+    const batch = button(`Revisar ${Object.keys(available).length} ajustes automáticos`, async () => {
+      draft = available; clearProfile(); renderConfiguration(); await review();
+    });
+    batch.id = 'review-recommended'; list.before(batch);
+  }
   for (const item of items) {
     const li = node('li', undefined, 'priority-item');
     const body = node('div');

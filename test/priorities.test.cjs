@@ -2,6 +2,25 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const priorities = require('../src/priorities.js');
 const normal = () => ({ errors: [], cpu: [{ LoadPercentage: 20 }], memory: { total: 100, free: 50 }, disks: [{ DeviceID: 'C:', Size: 100, FreeSpace: 50 }], startup: [] });
+const balanced = '381b4222-f694-41f0-9685-ff5bb260df2e';
+const saver = 'a1841308-3541-4fab-bc81-f71556f20b4a';
+test('power recommendation requires AC, known saver and an existing balanced plan; clears after applying', () => {
+  const s = normal(); s.onBattery = false;
+  s.configuration = { values: { power: saver }, plans: [{ id: saver }, { id: balanced }] };
+  assert.deepEqual(priorities(s)[0].changes, { power: balanced });
+  for (const battery of [true, undefined, null]) { s.onBattery = battery; assert.deepEqual(priorities(s), []); }
+  s.onBattery = false; s.configuration.values.power = balanced; assert.deepEqual(priorities(s), []);
+  s.configuration.values.power = saver; s.configuration.plans = [{ id: saver }]; assert.deepEqual(priorities(s), []);
+  s.configuration.plans.push({ id: balanced }); s.errors = ['plans'];
+  assert.equal(priorities(s).some(p => p.changes?.power), false);
+});
+test('automatic visual actions include only confirmed active settings', () => {
+  const s = normal(); s.configuration = { values: { animations: true, menuAnimation: false, comboAnimation: null } };
+  assert.deepEqual(priorities(s)[0].changes, { animations: false });
+  s.configuration.values.animations = false; assert.deepEqual(priorities(s), []);
+  s.configuration.values.animations = true; s.errors = ['configuration'];
+  assert.equal(priorities(s).some(p => p.changes), false);
+});
 test('no recommendations before a snapshot, or invented problems for normal readings', () => {
   assert.deepEqual(priorities(null), []); assert.deepEqual(priorities(normal()), []);
 });

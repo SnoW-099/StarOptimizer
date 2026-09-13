@@ -1,12 +1,12 @@
 # StarOptimizer
 
-Aplicación de escritorio para Windows 10/11 x64. Versión 0.6.0: recomendaciones con actualización periódica y revisión directa de ajustes automáticos compatibles. Conserva diagnóstico local, perfiles, mediciones antes/después, búsquedas, exportación y ajustes reversibles. Beta sin firma digital. Consulta `GUIA-PUESTA-A-PUNTO.md` para utilizarla en otro equipo.
+Aplicación de escritorio para Windows 10/11 x64. Versión 0.6.1: recomendaciones con actualización periódica y revisión conjunta de ajustes automáticos compatibles. Conserva diagnóstico local, perfiles, mediciones antes/después, búsquedas, exportación y ajustes reversibles. Beta sin firma digital. Consulta `GUIA-PUESTA-A-PUNTO.md` para utilizarla en otro equipo.
 
 ## Ejecutar
 
 **[Descargar el programa para Windows](https://github.com/SnoW-099/StarOptimizer/releases/latest)**. Descarga el ZIP, extrae la carpeta y abre el ejecutable. El repositorio es privado: inicia sesión con una cuenta con acceso. La descarga del código fuente no incluye el programa compilado; usa los archivos adjuntos de la versión.
 
-Descarga o genera `dist/StarOptimizer-0.6.0-portable.exe` y ábrelo. No necesita instalarse ni pide elevación. Windows puede mostrar una advertencia de editor desconocido porque el binario no está firmado. Algunas políticas de empresa pueden impedir leer o modificar ajustes; la app informa del error.
+Descarga o genera `dist/StarOptimizer-0.6.1-portable.exe` y ábrelo. No necesita instalarse ni pide elevación. Windows puede mostrar una advertencia de editor desconocido porque el binario no está firmado. Algunas políticas de empresa pueden impedir leer o modificar ajustes; la app informa del error.
 
 Para desarrollo, con Node.js y npm instalados:
 
@@ -16,6 +16,8 @@ npm start
 ```
 
 ## Qué hace
+
+- Recomendados permite revisar todos los ajustes automáticos disponibles en un lote antes de confirmar. Si el PC está conectado a corriente, usa el plan Economizador conocido de Windows y tiene disponible Equilibrado, ofrece cambiar a este último. No modifica planes personalizados ni crea planes. El consumo puede aumentar; el cambio es opcional y reversible. Identificadores y comportamiento de referencia: [Microsoft Power Policy Settings](https://learn.microsoft.com/en-us/windows/win32/power/power-policy-settings).
 
 - El análisis completo toma ocho muestras de CPU y comunica su media. En Recomendados, CPU/RAM se consultan cada cinco segundos mientras la sección está visible, con una media móvil de tres a seis muestras para CPU; el inventario completo se renueva cada minuto. Las recomendaciones se recalculan. Puedes pausar el directo; también se pausa durante mediciones, operaciones y revisión de cambios. Cada dato conserva su fecha si una actualización falla.
 - Cuando hay animaciones de Windows activadas, ofrece una reducción opcional con revisión y aplicación automática del lote compatible. Usa el motor existente, con verificación y restauración: no ejecuta texto arbitrario en CMD, no cierra aplicaciones y no borra archivos. Las recomendaciones de inicio, memoria, almacenamiento y hardware siguen requiriendo una decisión manual; no se presentan como reparaciones automáticas.
